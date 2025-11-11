@@ -1369,6 +1369,21 @@
             board.innerHTML = `<div class="text-red-500 p-4">Error initializing Firebase. Please check config.</div>`;
         }
 
+        // NEW FUNCTION: Check if nickname is already taken
+        async function isNicknameTaken(nickname, boardId) {
+            try {
+                const boardRef = doc(db, 'artifacts', appId, 'public', 'data', 'boards', boardId);
+                const usersCol = collection(boardRef, 'users');
+                const q = query(usersCol, where('nickname', '==', nickname));
+                const querySnapshot = await getDocs(q);
+                
+                return !querySnapshot.empty;
+            } catch (e) {
+                console.error("Error checking nickname:", e);
+                return false;
+            }
+        }
+
         function showModalPrompt(overlay, inputEl, submitBtn, cancelBtn = null, data = {}) {
             return new Promise((resolve) => {
                 overlay.style.display = 'flex';
@@ -4288,8 +4303,9 @@
             }
         }
 
+        // UPDATED: Change nickname function with duplicate validation
         changeNicknameBtn.addEventListener('click', async () => {
-            const newNickname = await showModalPrompt(
+            let newNickname = await showModalPrompt(
                 nicknameModalOverlay,
                 nicknameInput,
                 saveNicknameBtn,
@@ -4304,8 +4320,29 @@
                 }
             );
 
-            if (newNickname && newNickname.trim() !== "" && newNickname.trim() !== userNickname) {
-                await updateNicknameInFirestore(newNickname.trim());
+            if (newNickname) {
+                newNickname = newNickname.trim();
+                
+                if (newNickname !== "" && newNickname !== userNickname) {
+                    // Check if nickname is already taken
+                    const nicknameTaken = await isNicknameTaken(newNickname, currentBoardId);
+                    
+                    if (nicknameTaken) {
+                        await showModalAlert(
+                            errorModalOverlay,
+                            errorModalOkBtn,
+                            {
+                                title: "Nickname Taken",
+                                titleEl: errorModalTitle,
+                                text: `The nickname "${newNickname}" is already in use by someone else in this room. Please choose a different nickname.`,
+                                textEl: errorModalText
+                            }
+                        );
+                        return;
+                    }
+                    
+                    await updateNicknameInFirestore(newNickname);
+                }
             }
         });
 
@@ -4415,6 +4452,7 @@
             }
         });
 
+        // UPDATED: onAuthStateChanged with nickname validation
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 userId = user.uid;
@@ -4425,26 +4463,51 @@
                 const urlInviteToken = urlParams.get('invite') || null;
 
                 const defaultNick = `User_${userId.substring(0, 4)}`;
-                userNickname = await showModalPrompt(
-                    nicknameModalOverlay,
-                    nicknameInput,
-                    saveNicknameBtn,
-                    cancelNicknameBtn,
-                    { 
-                        title: "Welcome!", 
-                        titleEl: nicknameModalTitle, 
-                        text: "Please, choose your nickname.",
-                        textEl: nicknameModalOverlay.querySelector('p'),
-                        defaultValue: defaultNick,
-                        placeholder: "Type your nickname..."
-                    }
-                );
+                
+                let nicknameValid = false;
+                let attempts = 0;
+                const maxAttempts = 5;
+                
+                while (!nicknameValid && attempts < maxAttempts) {
+                    userNickname = await showModalPrompt(
+                        nicknameModalOverlay,
+                        nicknameInput,
+                        saveNicknameBtn,
+                        cancelNicknameBtn,
+                        { 
+                            title: attempts === 0 ? "Welcome!" : "Nickname Taken", 
+                            titleEl: nicknameModalTitle, 
+                            text: attempts === 0 
+                                ? "Please, choose your nickname." 
+                                : `The nickname "${userNickname}" is already in use. Please choose a different one.`,
+                            textEl: nicknameModalOverlay.querySelector('p'),
+                            defaultValue: attempts === 0 ? defaultNick : '',
+                            placeholder: "Type your nickname..."
+                        }
+                    );
 
-                if (!userNickname || userNickname.trim() === "") {
-                    userNickname = defaultNick;
+                    if (!userNickname || userNickname.trim() === "") {
+                        userNickname = defaultNick;
+                    } else {
+                        userNickname = userNickname.trim();
+                    }
+
+                    // Check if nickname is already taken
+                    const nicknameTaken = await isNicknameTaken(userNickname, urlBoardId);
+                    
+                    if (!nicknameTaken) {
+                        nicknameValid = true;
+                    } else {
+                        attempts++;
+                        if (attempts >= maxAttempts) {
+                            // After max attempts, append a random number
+                            userNickname = `${userNickname}_${Math.floor(Math.random() * 1000)}`;
+                            nicknameValid = true;
+                        }
+                    }
                 }
 
-                loadBoard(urlBoardId, urlInviteToken); 
+                loadBoard(urlBoardId, urlInviteToken);
 
             } else {
                 console.log("No user signed in, attempting auth...");
@@ -4460,6 +4523,3 @@
 </body>
 
 </html>
-
-
-
