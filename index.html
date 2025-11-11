@@ -1349,15 +1349,7 @@
         let lineClickPos = { x: 0, y: 0 };
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = {
-            apiKey: "AIzaSyCZjIpFdU4AX-4vwDfUlCEqw88_9p5YgLw",
-            authDomain: "evidence-board.firebaseapp.com",
-            projectId: "evidence-board",
-            storageBucket: "evidence-board.firebasestorage.app",
-            messagingSenderId: "63512059873",
-            appId: "1:63512059873:web:23d55acfebc8744a5d7ca0",
-            measurementId: "G-GQRV3HBDX1"
-        };
+        const firebaseConfig = [[FIREBASE_CONFIGS]];
 
         try {
             app = initializeApp(firebaseConfig);
@@ -4460,3 +4452,4 @@
 </body>
 
 </html>
+
