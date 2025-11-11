@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const SECRET_NAME = 'FIREBASE_CONFIGS';
-const PLACEHOLDER = '[[FIREBASE_CONFIGS]]';
+const PLACEHOLDER = '[[FIREBASE_CONFIGS_PLACEHOLDER]]';
 const TARGET_FILE = 'index.html'; 
 
 const configsJsonString = process.env[SECRET_NAME]; 
@@ -29,4 +29,5 @@ try {
     console.error("ERROR in Environment Variable Injection:");
     console.error(error.message);
     process.exit(1);
+
 }
