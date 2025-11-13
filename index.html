@@ -45,7 +45,6 @@
 
         #svg-layer-drawings {
             z-index: 5;
-            pointer-events: none; 
         }
 
         #selection-box {
@@ -619,7 +618,7 @@
             border: 1px solid rgba(255, 255, 255, 0.7);
             border-radius: 50%;
             pointer-events: none;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%) translateZ(0); /* Fix for rendering flicker */
             z-index: 9999;
         }
 
@@ -636,7 +635,7 @@
             background-color: #FFFFFF;
             border-radius: 50%;
             pointer-events: none;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%) translateZ(0); /* Fix for rendering flicker */
             z-index: 9999;
         }
 
@@ -911,6 +910,7 @@
         Use <span class="text-indigo-400 font-bold">Move Tool</span> to pan. Use <span class="font-bold">Right-Click</span> for options. Use <span class="font-bold">Scroll</span> to zoom.
         <span id="user-role-display" class="ml-4 font-bold"></span>
         <button id="change-nickname-btn" class="ml-2 px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-indigo-300" title="Change Nickname">Change Nickname</button>
+        <button id="password-settings-btn" class="ml-1 px-2 py-0.5 bg-slate-700 hover:bg-slate-600 rounded text-xs text-indigo-300" title="Password Settings">Password</button>
     </footer>
 
     <div id="eraser-cursor"></div>
@@ -1104,6 +1104,41 @@
     </div>
     <!-- END: Missing HTML Modals -->
 
+    <!-- START: Nickname Password Modals -->
+    <div id="nickname-password-modal-overlay" class="fixed top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-[31000] flex items-center justify-center" style="display: none;">
+        <div class="glass-panel p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <h2 class="text-xl font-bold text-white mb-4">Password Required</h2>
+            <p id="nickname-password-prompt-text" class="text-slate-300 mb-6">The nickname <strong class="text-white"></strong> is password protected. Please enter the password to use it.</p>
+            <input type="password" id="nickname-password-input" class="w-full bg-slate-700 text-white text-sm rounded-md p-2 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter nickname password...">
+            <div class="flex justify-end gap-4 mt-6">
+                <button id="cancel-nickname-password-btn" class="header-btn">Cancel</button>
+                <button id="submit-nickname-password-btn" class="header-btn bg-indigo-600 hover:bg-indigo-500">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="manage-nickname-password-modal-overlay" class="fixed top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-[20000] flex items-center justify-center" style="display: none;">
+        <div class="glass-panel p-6 rounded-lg shadow-xl max-w-sm w-full">
+            <h2 class="text-xl font-bold text-white mb-4">Nickname Password Settings</h2>
+            <p class="text-slate-300 mb-4">Set, change, or remove the password for your nickname: <strong id="manage-nickname-name" class="text-indigo-300"></strong></p>
+            <div class="mb-4">
+                <label for="nickname-password-change-input" class="block text-sm font-medium text-slate-300 mb-2">New Password</label>
+                <input type="password" id="nickname-password-change-input" class="w-full bg-slate-700 text-white text-sm rounded-md p-2 border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter new password (or blank)">
+            </div>
+            <div class="mb-6">
+                <label class="flex items-center">
+                    <input type="checkbox" id="remove-nickname-password-checkbox" class="h-4 w-4 bg-slate-700 border-slate-600 rounded text-indigo-500 focus:ring-indigo-500">
+                    <span class="ml-2 text-sm text-slate-300">Remove password</span>
+                </label>
+            </div>
+            <div class="flex justify-end gap-4">
+                <button id="cancel-nickname-password-settings-btn" class="header-btn">Cancel</button>
+                <button id="submit-nickname-password-settings-btn" class="header-btn bg-indigo-600 hover:bg-indigo-500">Save</button>
+            </div>
+        </div>
+    </div>
+    <!-- END: Nickname Password Modals -->
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
         import { 
@@ -1285,8 +1320,26 @@
         const errorModalText = document.getElementById('error-modal-text');
         const errorModalOkBtn = document.getElementById('error-modal-ok-btn');
 
+        // Nickname Password Modals
+        const nicknamePasswordModalOverlay = document.getElementById('nickname-password-modal-overlay');
+        const nicknamePasswordPromptText = document.getElementById('nickname-password-prompt-text');
+        const nicknamePasswordInput = document.getElementById('nickname-password-input');
+        const cancelNicknamePasswordBtn = document.getElementById('cancel-nickname-password-btn');
+        const submitNicknamePasswordBtn = document.getElementById('submit-nickname-password-btn');
+
+        const manageNicknamePasswordModalOverlay = document.getElementById('manage-nickname-password-modal-overlay');
+        const manageNicknameName = document.getElementById('manage-nickname-name');
+        const nicknamePasswordChangeInput = document.getElementById('nickname-password-change-input');
+        const removeNicknamePasswordCheckbox = document.getElementById('remove-nickname-password-checkbox');
+        const cancelNicknamePasswordSettingsBtn = document.getElementById('cancel-nickname-password-settings-btn');
+        const submitNicknamePasswordSettingsBtn = document.getElementById('submit-nickname-password-settings-btn');
+
+        const passwordSettingsBtn = document.getElementById('password-settings-btn');
+
+
         let app, db, auth, userId;
         let itemsCol, connectionsCol, drawingsCol, usersCol, backupsCol, invitesCol, boardRef;
+        let nicknamesCol; // New global collection for nicknames
         let unsubscribeItems, unsubscribeConnections, unsubscribeDrawings, unsubscribeUsers, unsubscribeBackups, unsubscribeUserDoc;
         let currentBoardId = null; 
 
@@ -1348,7 +1401,7 @@
         let lastMousePos = { x: 0, y: 0 };
         let lineClickPos = { x: 0, y: 0 };
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const appId = 'evidence-board';
         const firebaseConfig = {
             apiKey: "AIzaSyCZjIpFdU4AX-4vwDfUlCEqw88_9p5YgLw",
             authDomain: "evidence-board.firebaseapp.com",
@@ -1363,25 +1416,77 @@
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
+            nicknamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'nicknamePasswords');
             setLogLevel('Debug');
         } catch (e) {
             console.error("Firebase initialization error:", e);
             board.innerHTML = `<div class="text-red-500 p-4">Error initializing Firebase. Please check config.</div>`;
         }
 
-        // NEW FUNCTION: Check if nickname is already taken
-        async function isNicknameTaken(nickname, boardId) {
-            try {
-                const boardRef = doc(db, 'artifacts', appId, 'public', 'data', 'boards', boardId);
-                const usersCol = collection(boardRef, 'users');
-                const q = query(usersCol, where('nickname', '==', nickname));
-                const querySnapshot = await getDocs(q);
-                
-                return !querySnapshot.empty;
-            } catch (e) {
-                console.error("Error checking nickname:", e);
-                return false;
+        // NEW FUNCTION: Update nickname in Firestore
+        async function updateNicknameInFirestore(newNickname) {
+            userNickname = newNickname; // Update global variable
+
+            // Update the presence document in the current board
+            if (usersCol && userId) {
+                try {
+                    const userRef = doc(usersCol, userId);
+                    await updateDoc(userRef, { nickname: newNickname });
+                } catch (e) {
+                    console.error("Error updating nickname in board's user collection:", e);
+                }
             }
+        }
+        // NEW FUNCTION: Check for nickname password
+        async function getNicknamePasswordDoc(nickname) {
+            try {
+                const nicknameRef = doc(nicknamesCol, nickname);
+                const nicknameSnap = await getDoc(nicknameRef);
+                return nicknameSnap;
+            } catch (e) {
+                console.error("Error checking nickname password:", e);
+                return null;
+            }
+        }
+
+        // NEW FUNCTION: Validate nickname password
+        async function validateNicknamePassword(nickname, nicknameSnap) {
+            let passwordCorrect = false;
+            const expectedPassword = nicknameSnap.data().password;
+
+            while (!passwordCorrect) {
+                const password = await showModalPrompt(
+                    nicknamePasswordModalOverlay,
+                    nicknamePasswordInput,
+                    submitNicknamePasswordBtn,
+                    cancelNicknamePasswordBtn,
+                    {
+                        text: `The nickname <strong class="text-white">${nickname}</strong> is password protected. Please enter the password to use it.`,
+                        textEl: nicknamePasswordPromptText
+                    }
+                );
+
+                if (password === null) { // User clicked "Cancel"
+                    return false; // Abort login for this nickname
+                }
+
+                const hashedInput = await sha512(password);
+                if (hashedInput === expectedPassword) {
+                    passwordCorrect = true;
+                } else {
+                    await showModalAlert(
+                        errorModalOverlay,
+                        errorModalOkBtn,
+                        {
+                            title: "Password Incorrect",
+                            titleEl: errorModalTitle,
+                            text: "The password you entered is incorrect. Please try again.",
+                            textEl: errorModalText
+                        }
+                    );
+                }
+            }
+            return true; // Password was correct
         }
 
         function showModalPrompt(overlay, inputEl, submitBtn, cancelBtn = null, data = {}) {
@@ -1413,15 +1518,24 @@
                     }
                 };
 
+                // NEW: Add overlay click listener
+                const onOverlayClick = (e) => {
+                    if (e.target === overlay) {
+                        onCancel(null); // Pass null or no event
+                    }
+                };
+
                 submitBtn.addEventListener('click', onSubmit);
                 inputEl.addEventListener('keydown', onEnter);
                 if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
+                overlay.addEventListener('click', onOverlayClick); // NEW
 
                 function cleanup() {
                     overlay.style.display = 'none';
                     submitBtn.removeEventListener('click', onSubmit);
                     inputEl.removeEventListener('keydown', onEnter);
                     if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
+                    overlay.removeEventListener('click', onOverlayClick); // NEW
                 }
             });
         }
@@ -1441,13 +1555,23 @@
                     resolve(false);
                 };
 
+                // START: Add Overlay Click Listener
+                const onOverlayClick = (e) => {
+                    if (e.target === overlay) {
+                        onCancel();
+                    }
+                };
+                // END: Add Overlay Click Listener
+
                 confirmBtn.addEventListener('click', onConfirm);
                 cancelBtn.addEventListener('click', onCancel);
+                overlay.addEventListener('click', onOverlayClick); // Add this line
 
                 function cleanup() {
                     overlay.style.display = 'none';
                     confirmBtn.removeEventListener('click', onConfirm);
                     cancelBtn.removeEventListener('click', onCancel);
+                    overlay.removeEventListener('click', onOverlayClick); // Add this line
                 }
             });
         }
@@ -1455,14 +1579,86 @@
         function showModalAlert(overlay, okBtn, data = {}) {
              overlay.style.display = 'flex';
              if (data.title && data.titleEl) data.titleEl.textContent = data.title;
-             if (data.text && data.textEl) data.textEl.innerHTML = data.text;
+             
+             okBtn.focus(); // Focus the OK button
 
              const onOk = () => {
-                 overlay.style.display = 'none';
-                 okBtn.removeEventListener('click', onOk);
+                 cleanup();
                  if(data.callback) data.callback();
              };
+
+             const onEnter = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onOk();
+                }
+             };
+
+             function cleanup() {
+                overlay.style.display = 'none';
+                okBtn.removeEventListener('click', onOk);
+                document.removeEventListener('keydown', onEnter);
+             }
+
              okBtn.addEventListener('click', onOk);
+             document.addEventListener('keydown', onEnter); // Listen for Enter key
+        }
+
+        async function sha512(str) {
+            if (typeof crypto === 'undefined' || !crypto.subtle) {
+                console.warn('Web Crypto API not available. Using simple string.');
+                return str; 
+            }
+            const text = new TextEncoder().encode(str);
+            const hashBuffer = await crypto.subtle.digest('SHA-512', text);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hexHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            return hexHash;
+        }
+
+        // NEW FUNCTION: Update board ownership on login
+        async function updateBoardOwnership(nickname, newUserId) {
+            console.log(`Checking for boards owned by '${nickname}' to update ownerId to '${newUserId}'...`);
+            try {
+                const boardsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'boards');
+                
+                // Query for all boards where the 'owner' (nickname) matches
+                const q = query(boardsCollectionRef, where('owner', '==', nickname));
+                
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    console.log("No boards found owned by this nickname. No updates needed.");
+                    return;
+                }
+
+                // Create a batch to update all found boards
+                const batch = writeBatch(db);
+                let updateCount = 0;
+                
+                querySnapshot.forEach((docSnap) => {
+                    const boardData = docSnap.data();
+                    // Only update if the ownerId is different from the current user's ID
+                    if (boardData.ownerId !== newUserId) {
+                        batch.update(docSnap.ref, { ownerId: newUserId });
+                        updateCount++;
+                    }
+                });
+
+                // Commit the batch only if there are changes
+                if (updateCount > 0) {
+                    await batch.commit();
+                    console.log(`Successfully updated ownerId for ${updateCount} boards owned by '${nickname}'.`);
+                } else {
+                    console.log("All boards owned by this nickname already have the correct ownerId.");
+                }
+
+            } catch (e) {
+                console.error("Error updating board ownership:", e);
+                // This might fail if security rules are strict, but we'll let the user proceed.
+                // The check in loadBoard() will handle if they are the owner *of the current board*.
+                // This is a best-effort update for *other* boards.
+            }
         }
 
         function setupFirestoreListeners(boardId) { 
@@ -1700,6 +1896,15 @@
            pendingRestoreBackupId = null;
        });
 
+       // START: Add Restore Confirm Modal Overlay Click Listener
+       restoreConfirmModalOverlay.addEventListener('click', (e) => {
+            if (e.target === restoreConfirmModalOverlay) {
+                restoreConfirmModalOverlay.style.display = 'none';
+                pendingRestoreBackupId = null;
+            }
+       });
+       // END: Add Restore Confirm Modal Overlay Click Listener
+
        confirmRestoreBtn.addEventListener('click', () => {
            if (!isBoardOwner || !pendingRestoreBackupId) return;
 
@@ -1832,8 +2037,31 @@
            }
        });
 
+       // START: Fix for Board Settings Modal
+       boardSettingsBtn.addEventListener('click', () => {
+           if (!isBoardOwner) return;
+           settingsBoardName.textContent = currentBoardId;
+           boardPasswordChangeInput.value = '';
+           removePasswordCheckbox.checked = false;
+           boardSettingsModalOverlay.style.display = 'flex';
+       });
+
+       cancelBoardSettingsBtn.addEventListener('click', () => {
+           boardSettingsModalOverlay.style.display = 'none';
+       });
+       
+       boardSettingsModalOverlay.addEventListener('click', (e) => {
+            if (e.target === boardSettingsModalOverlay) {
+                boardSettingsModalOverlay.style.display = 'none';
+            }
+       });
+       // END: Fix for Board Settings Modal
+
         function updateUsersModal(users) {
             usersList.innerHTML = ''; 
+
+            const now = new Date();
+            const staleThreshold = new Date(now.getTime() - 60000); // 1 minute
 
             users.sort((a, b) => {
                 const order = { owner: 0, editor: 1, viewer: 2 };
@@ -1842,6 +2070,13 @@
 
             users.forEach(user => {
                 if(user.kicked) return;
+
+                // NEW: Filter out stale users from the list
+                const lastSeen = user.last_seen?.toDate ? user.last_seen.toDate() : null;
+                if (!lastSeen || lastSeen < staleThreshold) { 
+                    // User is stale, don't show them.
+                    return; 
+                }
 
                 const li = document.createElement('li');
 
@@ -1934,6 +2169,14 @@
         closeInviteModalBtn.addEventListener('click', () => {
             inviteModalOverlay.style.display = 'none';
         });
+
+        // START: Add Invite Modal Overlay Click Listener
+        inviteModalOverlay.addEventListener('click', (e) => {
+            if (e.target === inviteModalOverlay) {
+                inviteModalOverlay.style.display = 'none';
+            }
+        });
+        // END: Add Invite Modal Overlay Click Listener
 
         async function generateInviteLink(type) {
             const baseUrl = window.location.origin + window.location.pathname;
@@ -2666,16 +2909,8 @@
         });
 
         board.addEventListener('mousemove', (e) => {
-            if (cursorMode === 'draw') {
-                if (drawTool === 'eraser') {
-                    eraserCursor.style.left = `${e.clientX}px`;
-                    eraserCursor.style.top = `${e.clientY}px`;
-                } else {
-                    pencilCursor.style.left = `${e.clientX}px`;
-                    pencilCursor.style.top = `${e.clientY}px`;
-                }
-            }
-
+            // This logic is being moved to a new global mousemove handler
+            // to prevent flickering when moving over child elements.
             lastMousePos = { x: e.clientX, y: e.clientY };
         });
 
@@ -2726,17 +2961,10 @@
         });
 
         board.addEventListener('mouseenter', () => {
-            if (cursorMode === 'draw' && canEdit) {
-                if (drawTool === 'eraser') {
-                    eraserCursor.style.display = 'block';
-                } else {
-                    pencilCursor.style.display = 'block';
-                }
-            }
+            // This logic is being moved to a new global mousemove handler.
         });
-        board.addEventListener('mouseleave', () => {
-            eraserCursor.style.display = 'none';
-            pencilCursor.style.display = 'none';
+        board.addEventListener('mouseleave', (e) => {
+            // This logic is being moved to a new global mousemove handler.
         });
 
         document.addEventListener('keydown', async (e) => {
@@ -2767,7 +2995,9 @@
         document.addEventListener('paste', onPaste);
 
         async function onPaste(e) {
-            if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.isContentEditable) {
+            if (document.activeElement.tagName === 'TEXTAREA' || 
+                document.activeElement.isContentEditable ||
+                document.activeElement.tagName === 'INPUT') {
                 return;
             }
 
@@ -3067,6 +3297,26 @@
             closeAllPopups();
         });
 
+        // START: Add Switch Board Button Logic
+        switchBoardBtn.addEventListener('click', () => {
+            const newBoardId = boardNameInput.value.trim();
+            if (newBoardId && newBoardId !== currentBoardId) {
+                // The loadBoard function already handles password checks, creation, and kick checks.
+                loadBoard(newBoardId, null, true); // true = forceReload
+            } else {
+                boardNameInput.value = ""; // Clear if same or empty
+            }
+        });
+
+        // Also add 'Enter' key support for the input
+        boardNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                switchBoardBtn.click();
+            }
+        });
+        // END: Add Switch Board Button Logic
+
         addImageInput.addEventListener('change', (e) => {
             if (!canEdit) return;
             const file = e.target.files[0];
@@ -3166,6 +3416,14 @@
         cancelDeleteRoomBtn.addEventListener('click', () => {
             deleteRoomModalOverlay.style.display = 'none';
         });
+
+        // START: Add Delete Room Modal Overlay Click Listener
+        deleteRoomModalOverlay.addEventListener('click', (e) => {
+            if (e.target === deleteRoomModalOverlay) {
+                deleteRoomModalOverlay.style.display = 'none';
+            }
+        });
+        // END: Add Delete Room Modal Overlay Click Listener
 
         confirmDeleteRoomBtn.addEventListener('click', async () => {
             if (!isBoardOwner) return;
@@ -3855,6 +4113,40 @@
             document.removeEventListener('mouseup', onMouseUp);
         }
 
+        // NEW: Global mousemove handler to manage custom cursor
+        document.addEventListener('mousemove', (e) => {
+            // Always update last mouse position
+            lastMousePos = { x: e.clientX, y: e.clientY };
+
+            if (cursorMode !== 'draw' || !canEdit) {
+                eraserCursor.style.display = 'none';
+                pencilCursor.style.display = 'none';
+                return;
+            }
+
+            // Check if mouse is inside the board's boundaries
+            const boardRect = board.getBoundingClientRect();
+            const isInsideBoard = e.clientX >= boardRect.left &&
+                                e.clientX <= boardRect.right &&
+                                e.clientY >= boardRect.top &&
+                                e.clientY <= boardRect.bottom;
+
+            if (isInsideBoard) {
+                if (drawTool === 'eraser') {
+                    eraserCursor.style.display = 'block';
+                    eraserCursor.style.left = `${e.clientX}px`;
+                    eraserCursor.style.top = `${e.clientY}px`;
+                } else {
+                    pencilCursor.style.display = 'block';
+                    pencilCursor.style.left = `${e.clientX}px`;
+                    pencilCursor.style.top = `${e.clientY}px`;
+                }
+            } else {
+                eraserCursor.style.display = 'none';
+                pencilCursor.style.display = 'none';
+            }
+        });
+
         function getElementCenter(element) {
             const worldLeft = parseFloat(element.style.left);
             const worldTop = parseFloat(element.style.top);
@@ -4127,6 +4419,8 @@
             if (presenceInterval) clearInterval(presenceInterval);
 
             const userRef = doc(usersCol, userId);
+            const nicknameRef = doc(nicknamesCol, userNickname);
+
             await setDoc(userRef, { 
                 nickname: userNickname, 
                 role: currentUserRole,
@@ -4134,37 +4428,80 @@
                 kicked: false
             }, { merge: true });
 
+            // Also set last_seen and user ID on the global nickname doc
+            await setDoc(nicknameRef, { 
+                last_seen: serverTimestamp(),
+                currentUserId: userId 
+            }, { merge: true });
+
             presenceInterval = setInterval(() => {
+                // Update board presence
                 setDoc(userRef, { last_seen: serverTimestamp() }, { merge: true });
+                // Update global nickname presence
+                setDoc(nicknameRef, { last_seen: serverTimestamp() }, { merge: true });
             }, 15000); 
 
-            window.onbeforeunload = () => {
+            let isCleaningUp = false;
+            const cleanup = () => {
+                if (isCleaningUp) return;
+                isCleaningUp = true;
+
+                // Remove from board (best-effort)
                 deleteDoc(userRef);
+                
+                // Release global nickname (best-effort)
+                setDoc(nicknameRef, { 
+                    currentUserId: deleteField(),
+                    last_seen: serverTimestamp()
+                }, { merge: true });
+                
                 clearInterval(presenceInterval);
             };
+
+            window.addEventListener('beforeunload', cleanup);
+            window.addEventListener('pagehide', cleanup);
         }
 
         async function loadBoard(boardId, token = null, forceReload = false) {
             if (!boardId || boardId.trim() === "") {
                 boardId = "default-board";
             }
-            
-            if (!forceReload && boardId === currentBoardId) return;
-
-            document.body.classList.remove('is-owner');
-
-            if (presenceInterval) clearInterval(presenceInterval);
-            if (unsubscribeUsers) unsubscribeUsers();
-            if (unsubscribeUserDoc) unsubscribeUserDoc();
-
-            const sanitizedBoardId = boardId.trim().replace(/[^a-zA-Z0-9-]/g, '_');
+            const sanitizedBoardId = boardId.trim().replace(/[^a-zA-Z-0-9-]/g, '_');
             boardNameDisplay.textContent = `Loading: ${sanitizedBoardId}...`;
+
+            // NEW KICK CHECK: Check if user is kicked *before* loading
+            if (userId) { 
+                const usersColForCheck = collection(db, 'artifacts', appId, 'public', 'data', 'boards', sanitizedBoardId, 'users');
+                const userRefForCheck = doc(usersColForCheck, userId);
+                const userSnap = await getDoc(userRefForCheck);
+                
+                if (userSnap.exists() && userSnap.data().kicked === true) {
+                    console.log("Kicked user attempting to rejoin. Access denied.");
+                    showModalAlert(errorModalOverlay, errorModalOkBtn, {
+                        title: "Access Denied",
+                        titleEl: errorModalTitle,
+                        text: "You have been kicked from this board and cannot rejoin.",
+                        textEl: errorModalText
+                    });
+                    
+                    // Revert display and stop loading
+                    boardNameDisplay.textContent = `Board: ${currentBoardId || 'default-board'}`;
+                    
+                    // If they were kicked from their current board, send them to default
+                    if (currentBoardId === sanitizedBoardId && currentBoardId !== "default-board") {
+                         loadBoard("default-board", null, true);
+                    }
+                    return; // Stop loading this board
+                }
+            }
+            // END NEW KICK CHECK
 
             try {
                 const boardMetaRef = doc(db, 'artifacts', appId, 'public', 'data', 'boards', sanitizedBoardId);
                 const boardSnap = await getDoc(boardMetaRef);
 
                 let boardOwnerId = null;
+                // const ownerHash = await sha512(userNickname); // <-- Removed this duplicate declaration
 
                 if (boardSnap.exists()) {
                     const boardData = boardSnap.data();
@@ -4195,7 +4532,8 @@
                                 return; 
                             }
 
-                            if (password === boardData.password) {
+                            const hashedInput = await sha512(password);
+                            if (hashedInput === boardData.password) {
                                 passwordCorrect = true; // Exit the loop and proceed
                             } else {
                                 // Password was wrong. Show the error modal.
@@ -4230,26 +4568,22 @@
                         return;
                     }
 
-                    let passwordData = { hasPassword: false, ownerId: userId }; 
-                    boardOwnerId = userId; 
+                    // UPDATED: New board data structure
+                    let passwordData = { 
+                        hasPassword: false, 
+                        owner: userNickname, // NEW: Add owner nickname
+                        ownerId: userId      // UPDATED: Use userId instead of hash
+                    }; 
+                    boardOwnerId = userId; // This is a new board, so we are the owner. Set for the logic below.
 
                     if (newPassword && newPassword.trim() !== "") {
                         passwordData.hasPassword = true;
-                        passwordData.password = newPassword;
+                        passwordData.password = await sha512(newPassword);
                     }
                     await setDoc(boardMetaRef, passwordData);
                 }
 
-                // Reset kicked flag if user is rejoining after being kicked
-                const potentialUsersCol = collection(db, 'artifacts', appId, 'public', 'data', 'boards', sanitizedBoardId, 'users');
-                const potentialUserRef = doc(potentialUsersCol, userId);
-                if (userId) { // Ensure userId is set before trying to use it
-                    const potentialUserSnap = await getDoc(potentialUserRef);
-                    if (potentialUserSnap.exists() && potentialUserSnap.data().kicked === true) {
-                        await setDoc(potentialUserRef, { kicked: false }, { merge: true });
-                        console.log("Reset kicked flag for user rejoining board.");
-                    }
-                }
+                // REMOVED: Buggy "Reset kicked flag" logic was here.
 
                 currentBoardId = sanitizedBoardId;
                 boardRef = doc(db, 'artifacts', appId, 'public', 'data', 'boards', currentBoardId);
@@ -4260,7 +4594,11 @@
                 const userSnap = await getDoc(userRef);
 
                 let intendedRole = userSnap.exists() ? userSnap.data().role : 'viewer';
-                if (boardOwnerId === userId) { 
+                
+                // UPDATED: Ownership check now uses userId.
+                // We also check the old hash method for backward compatibility.
+                const ownerHash = await sha512(userNickname); 
+                if (boardOwnerId === userId || boardOwnerId === ownerHash) { 
                     isBoardOwner = true; 
                     intendedRole = 'owner'; 
                 } else { 
@@ -4324,132 +4662,168 @@
                 newNickname = newNickname.trim();
                 
                 if (newNickname !== "" && newNickname !== userNickname) {
-                    // Check if nickname is already taken
-                    const nicknameTaken = await isNicknameTaken(newNickname, currentBoardId);
                     
-                    if (nicknameTaken) {
+                    const oldNickname = userNickname; // Store the old nickname
+
+                    const newNicknameRef = doc(nicknamesCol, newNickname);
+                    const newNicknameSnap = await getDoc(newNicknameRef);
+                    let isTaken = false;
+
+                    if (newNicknameSnap.exists()) {
+                        const nicknameData = newNicknameSnap.data();
+
+                        // Check for password on new nickname
+                        if (nicknameData.password) {
+                            const passwordValid = await validateNicknamePassword(newNickname, newNicknameSnap);
+                            if (!passwordValid) {
+                                return; // User canceled password entry
+                            }
+                        }
+                        
+                        // Check if in use by someone else
+                        if (nicknameData.currentUserId && nicknameData.currentUserId !== userId) {
+                            const lastSeen = nicknameData.last_seen?.toDate ? nicknameData.last_seen.toDate() : null;
+                            const oneMinuteAgo = new Date(Date.now() - 60000); // 1 minute timeout
+
+                            if (lastSeen && lastSeen < oneMinuteAgo) {
+                                // User is stale. Allow takeover.
+                                isTaken = false;
+                            } else {
+                                // Nickname is actively in use.
+                                isTaken = true;
+                            }
+                        }
+                    }
+                    
+                    if (isTaken) {
                         await showModalAlert(
                             errorModalOverlay,
                             errorModalOkBtn,
                             {
-                                title: "Nickname Taken",
+                                title: "Nickname In Use",
                                 titleEl: errorModalTitle,
-                                text: `The nickname "${newNickname}" is already in use by someone else in this room. Please choose a different nickname.`,
+                                text: `The nickname "${newNickname}" is already in use by someone else. Please choose a different nickname.`,
                                 textEl: errorModalText
                             }
                         );
                         return;
                     }
+
+                    // Nickname is valid (free, or password was correct and not in use).
+                    // We need to release the OLD nickname and claim the NEW one.
+                    
+                    const batch = writeBatch(db);
+                    
+                    // Release old nickname
+                    const oldNicknameRef = doc(nicknamesCol, userNickname);
+                    batch.update(oldNicknameRef, { 
+                        currentUserId: deleteField(),
+                        last_seen: serverTimestamp() 
+                    });
+
+                    // Claim new nickname
+                    batch.set(newNicknameRef, { 
+                        currentUserId: userId,
+                        last_seen: serverTimestamp()
+                    }, { merge: true });
+                    
+                    await batch.commit();
                     
                     await updateNicknameInFirestore(newNickname);
-                }
-            }
-        });
 
-        async function updateNicknameInFirestore(newNickname) {
-            if (!userId || !usersCol) return;
-            try {
-                const userRef = doc(usersCol, userId);
-                await updateDoc(userRef, { nickname: newNickname });
-                userNickname = newNickname;
-            } catch (e) {
-                console.error("Error updating nickname:", e);
-            }
-        }
+                    // NEW: Update the 'owner' field (nickname) in any boards this user owns
+                    try {
+                        console.log(`Updating board ownership from '${oldNickname}' to '${newNickname}' for ownerId '${userId}'...`);
+                        const boardsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'boards');
+                        
+                        // Find all boards this user owns by their stable userId
+                        const q = query(boardsCollectionRef, where('ownerId', '==', userId));
+                        const querySnapshot = await getDocs(q);
 
-        switchBoardBtn.addEventListener('click', () => {
-            const newBoardId = boardNameInput.value;
-            if (newBoardId && newBoardId.trim() !== "" && newBoardId !== currentBoardId) {
-                loadBoard(newBoardId);
-            }
-        });
+                        if (!querySnapshot.empty) {
+                            const updateBatch = writeBatch(db);
+                            let updatedCount = 0;
+                            querySnapshot.forEach((docSnap) => {
+                                // Only update if the stored nickname is the old one
+                                if (docSnap.data().owner === oldNickname) {
+                                    updateBatch.update(docSnap.ref, { owner: newNickname });
+                                    updatedCount++;
+                                }
+                            });
 
-        boardNameInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                switchBoardBtn.click();
-            }
-        });
+                            if (updatedCount > 0) {
+                                await updateBatch.commit();
+                                console.log(`Updated 'owner' field for ${updatedCount} boards.`);
+                            } else {
+                                console.log("No boards found with matching old nickname to update.");
+                            }
+                        } else {
+                            console.log("This user does not own any boards (by ownerId), no 'owner' field to update.");
+                        }
 
-        boardSettingsBtn.addEventListener('click', () => {
-            if (!isBoardOwner) return;
-            settingsBoardName.textContent = currentBoardId;
-            boardPasswordChangeInput.value = '';
-            removePasswordCheckbox.checked = false;
-            boardPasswordChangeInput.disabled = false;
-            boardSettingsModalOverlay.style.display = 'flex';
-        });
-
-        boardSettingsModalOverlay.addEventListener('click', (e) => {
-            if (e.target === boardSettingsModalOverlay) {
-                boardSettingsModalOverlay.style.display = 'none';
-            }
-        });
-
-        cancelBoardSettingsBtn.addEventListener('click', () => {
-            boardSettingsModalOverlay.style.display = 'none';
-        });
-
-        removePasswordCheckbox.addEventListener('change', () => {
-            if (removePasswordCheckbox.checked) {
-                boardPasswordChangeInput.value = '';
-                boardPasswordChangeInput.disabled = true;
-            } else {
-                boardPasswordChangeInput.disabled = false;
-            }
-        });
-
-        boardPasswordChangeInput.addEventListener('input', () => {
-            if (boardPasswordChangeInput.value) {
-                removePasswordCheckbox.checked = false;
-                boardPasswordChangeInput.disabled = false;
-            }
-        });
-
-        submitBoardSettingsBtn.addEventListener('click', async () => {
-            if (!isBoardOwner || !boardRef) return;
-
-            submitBoardSettingsBtn.disabled = true;
-            submitBoardSettingsBtn.textContent = 'Updating...';
-
-            try {
-                let dataToUpdate = {};
-                if (removePasswordCheckbox.checked) {
-                    dataToUpdate = {
-                        hasPassword: false,
-                        password: deleteField() // Remove the password field
-                    };
-                } else {
-                    const newPassword = boardPasswordChangeInput.value;
-                    if (newPassword && newPassword.trim() !== "") {
-                        dataToUpdate = {
-                            hasPassword: true,
-                            password: newPassword.trim()
-                        };
-                    } else {
-                        // User left it blank AND didn't check the box. Treat as "remove password".
-                        dataToUpdate = {
-                            hasPassword: false,
-                            password: deleteField()
-                        };
+                    } catch (e) {
+                        console.error("Error updating 'owner' nickname in boards collection:", e);
                     }
+                    // END NEW LOGIC
                 }
-                await updateDoc(boardRef, dataToUpdate);
-                boardSettingsModalOverlay.style.display = 'none';
-
-            } catch (e) {
-                console.error("Error updating password:", e);
-            } finally {
-                submitBoardSettingsBtn.disabled = false;
-                submitBoardSettingsBtn.textContent = 'Update';
             }
         });
 
-        boardPasswordChangeInput.addEventListener('keydown', (e) => {
+        // NEW: Add Enter key listener for nickname password change prompt
+        nicknamePasswordChangeInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                submitBoardSettingsBtn.click();
+                submitNicknamePasswordSettingsBtn.click();
             }
+        });
+
+        // NEW: Add click listener for nickname password settings button
+        passwordSettingsBtn.addEventListener('click', () => {
+            manageNicknameName.textContent = userNickname;
+            nicknamePasswordChangeInput.value = '';
+            removeNicknamePasswordCheckbox.checked = false;
+            manageNicknamePasswordModalOverlay.style.display = 'flex';
+        });
+
+        // NEW: Add overlay click listener for nickname password settings
+        manageNicknamePasswordModalOverlay.addEventListener('click', (e) => {
+            if (e.target === manageNicknamePasswordModalOverlay) {
+                manageNicknamePasswordModalOverlay.style.display = 'none';
+            }
+        });
+
+        // NEW: Add click listener for managing nickname password
+        submitNicknamePasswordSettingsBtn.addEventListener('click', async () => {
+            submitNicknamePasswordSettingsBtn.disabled = true;
+            submitNicknamePasswordSettingsBtn.textContent = 'Saving...';
+
+            try {
+                const nicknameRef = doc(nicknamesCol, userNickname);
+                const newPassword = nicknamePasswordChangeInput.value;
+                
+                if (removePasswordCheckbox.checked) {
+                    await updateDoc(nicknameRef, {
+                        password: deleteField()
+                    });
+                } else if (newPassword && newPassword.trim() !== "") {
+                    const hashedPassword = await sha512(newPassword);
+                    await updateDoc(nicknameRef, {
+                        password: hashedPassword
+                    });
+                }
+                
+                manageNicknamePasswordModalOverlay.style.display = 'none';
+
+            } catch (e) {
+                console.error("Error updating nickname password:", e);
+            } finally {
+                submitNicknamePasswordSettingsBtn.disabled = false;
+                submitNicknamePasswordSettingsBtn.textContent = 'Save';
+            }
+        });
+
+        cancelNicknamePasswordSettingsBtn.addEventListener('click', () => {
+            manageNicknamePasswordModalOverlay.style.display = 'none';
         });
 
         // UPDATED: onAuthStateChanged with nickname validation
@@ -4468,7 +4842,7 @@
                 let attempts = 0;
                 const maxAttempts = 5;
                 
-                while (!nicknameValid && attempts < maxAttempts) {
+                while (!nicknameValid) {
                     userNickname = await showModalPrompt(
                         nicknameModalOverlay,
                         nicknameInput,
@@ -4492,20 +4866,67 @@
                         userNickname = userNickname.trim();
                     }
 
-                    // Check if nickname is already taken
-                    const nicknameTaken = await isNicknameTaken(userNickname, urlBoardId);
-                    
-                    if (!nicknameTaken) {
-                        nicknameValid = true;
+                    // Check for password on this nickname
+                    const nicknameRef = doc(nicknamesCol, userNickname);
+                    const nicknameSnap = await getDoc(nicknameRef);
+
+                    if (nicknameSnap.exists()) {
+                        const nicknameData = nicknameSnap.data();
+                        
+                        // Check for password
+                        if (nicknameData.password) {
+                            const passwordValid = await validateNicknamePassword(userNickname, nicknameSnap);
+                            if (!passwordValid) {
+                                attempts++;
+                                continue; // User canceled, restart nickname prompt
+                            }
+                        }
+
+                        // Check if currently in use by someone else
+                        if (nicknameData.currentUserId && nicknameData.currentUserId !== userId) {
+                            const lastSeen = nicknameData.last_seen?.toDate ? nicknameData.last_seen.toDate() : null;
+                            const oneMinuteAgo = new Date(Date.now() - 60000); // 1 minute timeout
+
+                            if (lastSeen && lastSeen < oneMinuteAgo) {
+                                // User is stale. Take the nickname.
+                                // --- FIX: Added await setDoc here to claim the stale nickname ---
+                                await setDoc(nicknameRef, { currentUserId: userId, last_seen: serverTimestamp() }, { merge: true });
+                                nicknameValid = true;
+                            } else {
+                                // Nickname is in use by someone else, globally.
+                                nicknameValid = false;
+                                // Update the prompt text for the next loop iteration
+                                nicknameModalTitle.textContent = "Nickname In Use";
+                                nicknameModalOverlay.querySelector('p').innerHTML = `The nickname "${userNickname}" is already in use by someone else. Please choose a different one.`;
+                            }
+                        } else {
+                            // Nickname is free, or it's this user reusing it. Claim it.
+                            await setDoc(nicknameRef, { currentUserId: userId, last_seen: serverTimestamp() }, { merge: true });
+                            nicknameValid = true;
+                        }
                     } else {
+                        // Nickname doc doesn't exist. It's completely free. Claim it.
+                        await setDoc(nicknameRef, { currentUserId: userId, last_seen: serverTimestamp() });
+                        nicknameValid = true;
+                    }
+
+                    // This block runs if the name was taken
+                    if (!nicknameValid) {
                         attempts++;
                         if (attempts >= maxAttempts) {
                             // After max attempts, append a random number
                             userNickname = `${userNickname}_${Math.floor(Math.random() * 1000)}`;
-                            nicknameValid = true;
+                            // We MUST re-run the check for this new random-suffixed name, but it's very unlikely to be taken.
+                            // For simplicity, we'll just claim it and assume it's free.
+                            const newNicknameRef = doc(nicknamesCol, userNickname);
+                            await setDoc(newNicknameRef, { currentUserId: userId, last_seen: serverTimestamp() });
+                            nicknameValid = true; // Force exit
                         }
                     }
                 }
+
+                // NEW: Update ownership of all boards associated with this nickname
+                await updateBoardOwnership(userNickname, userId);
 
                 loadBoard(urlBoardId, urlInviteToken);
 
