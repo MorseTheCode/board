@@ -2,14 +2,15 @@ name: Cleanup Stale Nicknames
 
 on:
   schedule:
-
+    # This runs the job every 5 minutes
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    # This allows you to run it manually from the Actions tab
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -20,8 +21,8 @@ jobs:
         run: npm install firebase-admin
 
       - name: Run Cleanup Script
-
-        run: node ./cleanup.js
+        # We create this script in the next step
+        run: node ./.github/scripts/cleanup.js
         env:
-
+          # This securely injects your secret JSON key
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
