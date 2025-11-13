@@ -1,6 +1,6 @@
 const admin = require('firebase-admin');
 
-async function cleanupStaleNicknames() {
+async function testConnection() {
   try {
 
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
@@ -11,44 +11,28 @@ async function cleanupStaleNicknames() {
     const db = admin.firestore();
     console.log('Firebase Admin initialized successfully.');
 
-    const STALE_THRESHOLD_MINUTES = 2; 
-    const threshold = new Date(Date.now() - STALE_THRESHOLD_MINUTES * 60 * 1000);
-
-    const appId = 'evidence-board'; 
-
-    const nicknamesCol = db.collection('artifacts').doc(appId)
-                           .collection('public').doc('data')
-                           .collection('nicknamePasswords');
-
-    const query = nicknamesCol
-      .where('currentUserId', '!=', null)
-      .where('last_seen', '<', threshold);
-
-    const snapshot = await query.get();
-
-    if (snapshot.empty) {
-      console.log('No stale nicknames found. Exiting.');
-      return;
+    // --- INÍCIO DO TESTE DE PING ---
+    console.log('Attempting to list root collections (ping test)...');
+    const collections = await db.listCollections();
+    
+    if (collections.length === 0) {
+      console.log('Ping test SUCCESSFUL, but no collections found at the root.');
+      console.log('This means AUTHENTICATION IS WORKING.');
+    } else {
+      console.log('Ping test SUCCESSFUL. Found collections:');
+      collections.forEach(col => console.log(`- ${col.id}`));
+      console.log('This means AUTHENTICATION IS WORKING.');
     }
+    // --- FIM DO TESTE DE PING ---
 
-    console.log(`Found ${snapshot.size} stale nickname(s) to release...`);
-
-    const batch = db.batch();
-    snapshot.forEach(doc => {
-      console.log(`- Releasing nickname: ${doc.id}`);
-
-      batch.update(doc.ref, {
-        currentUserId: admin.firestore.FieldValue.delete()
-      });
-    });
-
-    await batch.commit();
-    console.log('Successfully released all stale nicknames.');
+    // O resto do seu script (não precisamos dele para este teste)
+    console.log('Skipping cleanup logic for this test.');
+    process.exit(0); // Sai com sucesso
 
   } catch (error) {
-    console.error('Error during cleanup script execution:', error);
+    console.error('Error during script execution:', error);
     process.exit(1); 
   }
 }
 
-cleanupStaleNicknames();
+testConnection();
