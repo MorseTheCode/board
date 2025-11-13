@@ -11,7 +11,7 @@ async function cleanupStaleNicknames() {
     const db = admin.firestore();
     console.log('Firebase Admin initialized successfully.');
 
-    const STALE_THRESHOLD_MINUTES = 2; 
+    const STALE_THRESHOLD_MINUTES = 1; 
     const threshold = new Date(Date.now() - STALE_THRESHOLD_MINUTES * 60 * 1000);
 
     const appId = 'evidence-board'; 
