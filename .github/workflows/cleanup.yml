@@ -21,7 +21,7 @@ jobs:
 
       - name: Run Cleanup Script
 
-        run: node ./.github/scripts/cleanup.js
+        run: node cleanup.js
         env:
 
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
