@@ -22,7 +22,7 @@ jobs:
 
       - name: Run Cleanup Script
         # We create this script in the next step
-        run: node ./.github/scripts/cleanup.js
+        run: node /home/runner/work/board/.github/scripts/cleanup.js
         env:
           # This securely injects your secret JSON key
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
