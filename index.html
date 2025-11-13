@@ -650,6 +650,7 @@
         body.read-only #clear-lines-btn,
         body.read-only #clear-drawings-btn,
         body.read-only #clear-all-btn,
+        body.read-only #manage-backups-btn,
         body.read-only .edit-btn,
         body.read-only .delete-btn,
         body.read-only .resize-handle-image,
@@ -671,7 +672,6 @@
         }
 
         body:not(.is-owner) #delete-room-btn,
-        body:not(.is-owner) #manage-backups-btn,
         body:not(.is-owner) #board-settings-btn {
             display: none !important;
         }
@@ -1462,10 +1462,11 @@
                     cancelNicknamePasswordBtn,
                     {
                         text: `The nickname <strong class="text-white">${nickname}</strong> is password protected. Please enter the password to use it.`,
-                        textEl: nicknamePasswordPromptText
+                        textEl: nicknamePasswordPromptText,
+                        closeOnOverlayClick: false
                     }
                 );
-
+ 
                 if (password === null) { // User clicked "Cancel"
                     return false; // Abort login for this nickname
                 }
@@ -1518,24 +1519,29 @@
                     }
                 };
 
-                // NEW: Add overlay click listener
+                const closeOnOverlayClick = data.closeOnOverlayClick !== false;
+
                 const onOverlayClick = (e) => {
                     if (e.target === overlay) {
-                        onCancel(null); // Pass null or no event
+                        onCancel(null);
                     }
                 };
 
                 submitBtn.addEventListener('click', onSubmit);
                 inputEl.addEventListener('keydown', onEnter);
                 if (cancelBtn) cancelBtn.addEventListener('click', onCancel);
-                overlay.addEventListener('click', onOverlayClick); // NEW
+                if (closeOnOverlayClick) {
+                    overlay.addEventListener('click', onOverlayClick);
+                }
 
                 function cleanup() {
                     overlay.style.display = 'none';
                     submitBtn.removeEventListener('click', onSubmit);
                     inputEl.removeEventListener('keydown', onEnter);
                     if (cancelBtn) cancelBtn.removeEventListener('click', onCancel);
-                    overlay.removeEventListener('click', onOverlayClick); // NEW
+                    if (closeOnOverlayClick) {
+                        overlay.removeEventListener('click', onOverlayClick);
+                    }
                 }
             });
         }
@@ -1857,12 +1863,12 @@
        backupsList.addEventListener('click', async (e) => {
            const target = e.target;
            if (target.classList.contains('restore-btn')) {
-               if (!isBoardOwner) return;
+               if (!canEdit) return;
                pendingRestoreBackupId = target.dataset.backupId;
                restoreBackupName.textContent = target.dataset.backupName;
                restoreConfirmModalOverlay.style.display = 'flex';
            } else if (target.classList.contains('delete-backup-btn')) {
-               if (!isBoardOwner) return;
+               if (!canEdit) return;
                const backupId = target.dataset.backupId;
                const backupNameText = target.closest('li').querySelector('.text-sm').textContent;
                
@@ -1883,7 +1889,7 @@
        });
 
        async function deleteBackup(backupId) {
-           if (!isBoardOwner) return;
+           if (!canEdit) return;
            try {
                await deleteDoc(doc(backupsCol, backupId));
            } catch (e) {
@@ -1896,17 +1902,8 @@
            pendingRestoreBackupId = null;
        });
 
-       // START: Add Restore Confirm Modal Overlay Click Listener
-       restoreConfirmModalOverlay.addEventListener('click', (e) => {
-            if (e.target === restoreConfirmModalOverlay) {
-                restoreConfirmModalOverlay.style.display = 'none';
-                pendingRestoreBackupId = null;
-            }
-       });
-       // END: Add Restore Confirm Modal Overlay Click Listener
-
        confirmRestoreBtn.addEventListener('click', () => {
-           if (!isBoardOwner || !pendingRestoreBackupId) return;
+           if (!canEdit || !pendingRestoreBackupId) return;
 
            const backupId = pendingRestoreBackupId;
            pendingRestoreBackupId = null;
@@ -1916,7 +1913,7 @@
        });
 
        async function clearBoardContent() {
-           if (!isBoardOwner) return;
+           if (!canEdit) return;
 
            const itemsSnap = await getDocs(itemsCol);
            const connectionsSnap = await getDocs(connectionsCol);
@@ -1932,7 +1929,7 @@
        }
 
        async function startRestoreProcess(backupId) {
-           if (!isBoardOwner) return;
+           if (!canEdit) return;
 
            backupsModalOverlay.style.display = 'none';
            console.log(`Restoring backup ${backupId}...`);
@@ -1992,7 +1989,7 @@
        }
 
        createNewBackupBtn.addEventListener('click', async () => {
-           if (!isBoardOwner) return;
+           if (!canEdit) return;
 
            const btn = createNewBackupBtn;
            btn.disabled = true;
@@ -2023,7 +2020,7 @@
        });
 
        manageBackupsBtn.addEventListener('click', () => {
-           if (!isBoardOwner) return;
+           if (!canEdit) return;
            backupsModalOverlay.style.display = 'flex';
        });
 
@@ -2052,7 +2049,7 @@
        
        boardSettingsModalOverlay.addEventListener('click', (e) => {
             if (e.target === boardSettingsModalOverlay) {
-                boardSettingsModalOverlay.style.display = 'none';
+                
             }
        });
        // END: Fix for Board Settings Modal
@@ -4654,10 +4651,11 @@
                     text: "What would you like to be called?",
                     textEl: nicknameModalOverlay.querySelector('p'),
                     defaultValue: userNickname,
-                    placeholder: "Enter your nickname..."
+                    placeholder: "Enter your nickname...",
+                    closeOnOverlayClick: false
                 }
             );
-
+ 
             if (newNickname) {
                 newNickname = newNickname.trim();
                 
@@ -4785,10 +4783,9 @@
             manageNicknamePasswordModalOverlay.style.display = 'flex';
         });
 
-        // NEW: Add overlay click listener for nickname password settings
         manageNicknamePasswordModalOverlay.addEventListener('click', (e) => {
             if (e.target === manageNicknamePasswordModalOverlay) {
-                manageNicknamePasswordModalOverlay.style.display = 'none';
+                
             }
         });
 
@@ -4856,10 +4853,11 @@
                                 : `The nickname "${userNickname}" is already in use. Please choose a different one.`,
                             textEl: nicknameModalOverlay.querySelector('p'),
                             defaultValue: attempts === 0 ? defaultNick : '',
-                            placeholder: "Type your nickname..."
+                            placeholder: "Type your nickname...",
+                            closeOnOverlayClick: false
                         }
                     );
-
+ 
                     if (!userNickname || userNickname.trim() === "") {
                         userNickname = defaultNick;
                     } else {
@@ -4925,8 +4923,70 @@
                     }
                 }
 
+                // START: New logic to release old nicknames
+                const oldNicknames = []; 
+                try {
+                    console.log(`Checking for other nicknames associated with userId ${userId}...`);
+                    const q = query(nicknamesCol, where("currentUserId", "==", userId));
+                    const snapshot = await getDocs(q);
+                    
+                    if (!snapshot.empty) {
+                        const batch = writeBatch(db);
+                        let releasedCount = 0;
+                        snapshot.forEach(docSnap => {
+                            if (docSnap.id !== userNickname) { 
+                                console.log(`Releasing old nickname: ${docSnap.id}`);
+                                oldNicknames.push(docSnap.id); 
+                                batch.update(docSnap.ref, { currentUserId: deleteField() });
+                                releasedCount++;
+                            }
+                        });
+                        if (releasedCount > 0) {
+                            await batch.commit();
+                            console.log(`Released ${releasedCount} old nickname(s).`);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error releasing old nicknames:", e);
+                }
+                // END: New logic
+
                 // NEW: Update ownership of all boards associated with this nickname
                 await updateBoardOwnership(userNickname, userId);
+
+                // START: New logic to transfer ownership from old nicknames
+                if (oldNicknames.length > 0) {
+                    try {
+                        console.log(`Transferring board ownership from old nicknames [${oldNicknames.join(', ')}] to '${userNickname}' for ownerId '${userId}'...`);
+                        const boardsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'boards');
+                        
+                        const q = query(boardsCollectionRef, where('ownerId', '==', userId));
+                        const querySnapshot = await getDocs(q);
+
+                        if (!querySnapshot.empty) {
+                            const updateBatch = writeBatch(db);
+                            let updatedCount = 0;
+                            querySnapshot.forEach((docSnap) => {
+                                if (oldNicknames.includes(docSnap.data().owner)) {
+                                    updateBatch.update(docSnap.ref, { owner: userNickname }); 
+                                    updatedCount++;
+                                }
+                            });
+
+                            if (updatedCount > 0) {
+                                await updateBatch.commit();
+                                console.log(`Updated 'owner' field for ${updatedCount} boards from old nicknames.`);
+                            } else {
+                                console.log("No boards found with matching old nickname to update.");
+                            }
+                        } else {
+                            console.log("This user does not own any boards (by ownerId), no 'owner' field to update.");
+                        }
+                    } catch (e) {
+                        console.error("Error transferring 'owner' nickname in boards collection:", e);
+                    }
+                }
+                // END: New logic to transfer ownership
 
                 loadBoard(urlBoardId, urlInviteToken);
 
