@@ -18,7 +18,7 @@ async function cleanupStaleNicknames() {
 
     // 2. Define Stale Threshold
     const STALE_THRESHOLD_MINUTES = 1; // 1 minute for testing, you may want this higher
-    const threshold = new Date(Date.now() - STALE_THRESHOLD_MINUTES * 20 * 1000);
+    const threshold = new Date(Date.now() - STALE_THRESHOLD_MINUTES * 60 * 1000);
 
     const appId = 'evidence-board'; // As defined in your app
 
