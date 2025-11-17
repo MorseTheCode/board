@@ -5570,7 +5570,7 @@
                         const needsWidthUpdate = (data.mode === 'vertical' && Math.abs(newW_px - w) > 1);
                         const needsHeightUpdate = (data.mode === 'horizontal' && Math.abs(newH_px - h) > 1);
 
-                        if ((needsWidthUpdate || needsHeightUpdate) && !isResizing && !isResizingTimelineEvent) {
+                        if ((needsWidthUpdate || needsHeightUpdate) && !isResizing && !isMovingTimelineEvent && !isResizingTimelineEvent) {
                             if (typeof itemsCol !== 'undefined' && itemsCol) {
                                 try {
                                     const itemRef = doc(itemsCol, itemEl.id);
