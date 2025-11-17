@@ -6685,9 +6685,7 @@
                             const userRef = doc(usersCol, userId);
                             const userSnap = await getDoc(userRef);
 
-                            let intendedRole = userSnap.exists() ? userSnap.data().role : 'viewer';
-
-
+                            let intendedRole = (userSnap.exists() && userSnap.data().role) ? userSnap.data().role : 'viewer';
 
                             const ownerHash = await sha512(userNickname);
                             if (boardOwnerId === userId || boardOwnerId === ownerHash) {
