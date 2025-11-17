@@ -2360,6 +2360,7 @@
                     const leaveRoomBtn = document.getElementById('leave-room-btn');
                     
                     const logoutGuestBtn = document.getElementById('logout-guest-btn');
+                    const logoutGoogleBtn = document.getElementById('logout-google-btn');
 
                     const sidebarMenu = document.getElementById('sidebar-menu');
                     const sidebarItemList = document.getElementById('sidebar-item-list');
@@ -2520,6 +2521,28 @@
                         console.log("Detached all Firestore listeners.");
                     }
 
+                    async function isNicknameTaken(nickname, currentUserId) {
+                        if (!nickname) return false;
+
+                        try {
+                            const q = query(nicknamesCol, where("nickname", "==", nickname));
+                            const querySnapshot = await getDocs(q);
+
+                            if (querySnapshot.empty) {
+                                return false; // Not taken
+                            }
+
+                            // Check if the only user with this nickname is the current user
+                            if (querySnapshot.size === 1 && querySnapshot.docs[0].id === currentUserId) {
+                                return false; // Not taken (it's me)
+                            }
+
+                            return true; // Taken by someone else
+                        } catch (e) {
+                            console.error("Error checking nickname uniqueness:", e);
+                            return true; // Fail safe: assume it's taken if error
+                        }
+                    }
 
                     async function updateNicknameInFirestore(newNickname) {
                         userNickname = newNickname;
@@ -2740,51 +2763,6 @@
                         const hashArray = Array.from(new Uint8Array(hashBuffer));
                         const hexHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
                         return hexHash;
-                    }
-
-
-                    async function updateBoardOwnership(nickname, newUserId) {
-                        console.log(`Checking for boards owned by '${nickname}' to update ownerId to '${newUserId}'...`);
-                        try {
-                            const boardsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'boards');
-
-
-                            const q = query(boardsCollectionRef, where('owner', '==', nickname));
-
-                            const querySnapshot = await getDocs(q);
-
-                            if (querySnapshot.empty) {
-                                console.log("No boards found owned by this nickname. No updates needed.");
-                                return;
-                            }
-
-
-                            const batch = writeBatch(db);
-                            let updateCount = 0;
-
-                            querySnapshot.forEach((docSnap) => {
-                                const boardData = docSnap.data();
-
-                                if (boardData.ownerId !== newUserId) {
-                                    batch.update(docSnap.ref, { ownerId: newUserId });
-                                    updateCount++;
-                                }
-                            });
-
-
-                            if (updateCount > 0) {
-                                await batch.commit();
-                                console.log(`Successfully updated ownerId for ${updateCount} boards owned by '${nickname}'.`);
-                            } else {
-                                console.log("All boards owned by this nickname already have the correct ownerId.");
-                            }
-
-                        } catch (e) {
-                            console.error("Error updating board ownership:", e);
-
-
-
-                        }
                     }
 
                     function setupFirestoreListeners(boardId) {
@@ -3455,7 +3433,6 @@
                                 li.remove();
                             }
                         });
-
 
                     }
 
@@ -6397,7 +6374,7 @@
                 if (presenceInterval) clearInterval(presenceInterval);
 
                 const userRef = doc(usersCol, userId);
-                const nicknameRef = doc(nicknamesCol, userNickname);
+                const globalUserRef = doc(nicknamesCol, userId); // This is for the *global* user list
 
                 await setDoc(userRef, {
                     nickname: userNickname,
@@ -6406,9 +6383,11 @@
                     kicked: false
                 }, { merge: true });
 
-                await setDoc(nicknameRef, {
+                await setDoc(globalUserRef, {
                     last_seen: serverTimestamp(),
-                    currentUserId: userId
+                    userId: userId,
+                    nickname: userNickname, // Add nickname to global list
+                    isAnon: auth.currentUser ? auth.currentUser.isAnonymous : true // Add isAnon
                 }, { merge: true });
 
                 presenceInterval = setInterval(() => {
@@ -6417,7 +6396,7 @@
                         nickname: userNickname
                     }, { merge: true });
 
-                    setDoc(nicknameRef, {
+                    setDoc(globalUserRef, {
                         last_seen: serverTimestamp()
                     }, { merge: true });
                 }, 15000);
@@ -6434,9 +6413,9 @@
                     presenceInterval = null;
 
                     try {
-                        if (nicknameRef) {
-                            await setDoc(nicknameRef, {
-                                currentUserId: deleteField(),
+                        if (globalUserRef) {
+                            await setDoc(globalUserRef, {
+                                userId: deleteField(),
                                 last_seen: serverTimestamp()
                             }, { merge: true });
                         }
@@ -6760,40 +6739,11 @@
 
                         if (newNickname) {
                             newNickname = newNickname.trim();
+                            const oldNickname = userNickname; // Store the old nickname
 
                             if (newNickname !== "" && newNickname !== userNickname) {
 
-                                const oldNickname = userNickname;
-
-                                const newNicknameRef = doc(nicknamesCol, newNickname);
-                                const newNicknameSnap = await getDoc(newNicknameRef);
-                                let isTaken = false;
-
-                                if (newNicknameSnap.exists()) {
-                                    const nicknameData = newNicknameSnap.data();
-
-
-                                    if (nicknameData.password) {
-                                        const passwordValid = await validateNicknamePassword(newNickname, newNicknameSnap);
-                                        if (!passwordValid) {
-                                            return;
-                                        }
-                                    }
-
-
-                                    if (nicknameData.currentUserId && nicknameData.currentUserId !== userId) {
-                                        const lastSeen = nicknameData.last_seen?.toDate ? nicknameData.last_seen.toDate() : null;
-                                        const oneMinuteAgo = new Date(Date.now() - 60000);
-
-                                        if (lastSeen && lastSeen < oneMinuteAgo) {
-
-                                            isTaken = false;
-                                        } else {
-
-                                            isTaken = true;
-                                        }
-                                    }
-                                }
+                                const isTaken = await isNicknameTaken(newNickname, userId);
 
                                 if (isTaken) {
                                     await showModalAlert(
@@ -6809,33 +6759,29 @@
                                     return;
                                 }
 
-
-
-
-                                const batch = writeBatch(db);
-
-
-                                const oldNicknameRef = doc(nicknamesCol, userNickname);
-                                batch.update(oldNicknameRef, {
-                                    currentUserId: deleteField(),
+                                // Update the user's document in /users/{userId}
+                                const userRef = doc(nicknamesCol, userId);
+                                await updateDoc(userRef, {
+                                    nickname: newNickname,
                                     last_seen: serverTimestamp()
                                 });
 
+                                // Update local state
+                                userNickname = newNickname;
+                                localStorage.setItem(NICKNAME_STORAGE_KEY, userNickname);
 
-                                batch.set(newNicknameRef, {
-                                    currentUserId: userId,
-                                    last_seen: serverTimestamp()
-                                }, { merge: true });
+                                // Update the nickname in the *current board's* user list
+                                if (currentBoardId) {
+                                    const boardUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'boards', currentBoardId, 'users', userId);
+                                    await setDoc(boardUserRef, {
+                                        nickname: newNickname
+                                    }, { merge: true });
+                                }
 
-                                await batch.commit();
-
-                                await updateNicknameInFirestore(newNickname);
-
-
+                                // Try to update ownership on boards
                                 try {
                                     console.log(`Updating board ownership from '${oldNickname}' to '${newNickname}' for ownerId '${userId}'...`);
                                     const boardsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'boards');
-
 
                                     const q = query(boardsCollectionRef, where('ownerId', '==', userId));
                                     const querySnapshot = await getDocs(q);
@@ -6864,12 +6810,9 @@
                                 } catch (e) {
                                     console.error("Error updating 'owner' nickname in boards collection:", e);
                                 }
-
-                                localStorage.setItem(NICKNAME_STORAGE_KEY, userNickname);
                             }
                         }
                     });
-
 
                     nicknamePasswordChangeInput.addEventListener('keydown', (e) => {
                         if (e.key === 'Enter') {
@@ -6877,7 +6820,6 @@
                             submitNicknamePasswordSettingsBtn.click();
                         }
                     });
-
 
                     passwordSettingsBtn.addEventListener('click', () => {
                         manageNicknameName.textContent = userNickname;
@@ -6898,16 +6840,16 @@
                         submitNicknamePasswordSettingsBtn.textContent = 'Saving...';
 
                         try {
-                            const nicknameRef = doc(nicknamesCol, userNickname);
+                            const userRef = doc(nicknamesCol, userId); // Correct: Use userId
                             const newPassword = nicknamePasswordChangeInput.value;
 
                             if (removeNicknamePasswordCheckbox.checked) {
-                                await updateDoc(nicknameRef, {
+                                await updateDoc(userRef, {
                                     password: deleteField()
                                 });
                             } else if (newPassword && newPassword.trim() !== "") {
                                 const hashedPassword = await sha512(newPassword);
-                                await updateDoc(nicknameRef, {
+                                await updateDoc(userRef, {
                                     password: hashedPassword
                                 });
                             }
@@ -6925,7 +6867,6 @@
                     cancelNicknamePasswordSettingsBtn.addEventListener('click', () => {
                         manageNicknamePasswordModalOverlay.style.display = 'none';
                     });
-
 
                     async function showLobby() {
                         document.querySelector('header').style.display = 'none';
@@ -7287,7 +7228,6 @@
                         }
                     }
                     
-
                     toggleSidebarBtn.addEventListener('click', toggleSidebar);
                     closeSidebarBtn.addEventListener('click', toggleSidebar);
                     sidebarSearchInput.addEventListener('input', renderSidebarList);
@@ -7342,16 +7282,18 @@
                     });
 
                     saveNicknameBtn.addEventListener("click", async () => {
-                        const nickname = nicknameInput.value.trim();
-                        if (nickname) {
-                            localStorage.setItem(NICKNAME_STORAGE_KEY, nickname);
-                            try {
-                                await signInAnonymously(auth);
-                            } catch (e) {
-                                console.error("Anonymous sign-in error:", e);
+                        if (!auth.currentUser) {
+                            const nickname = nicknameInput.value.trim();
+                            if (nickname) {
+                                localStorage.setItem(NICKNAME_STORAGE_KEY, nickname);
+                                try {
+                                    await signInAnonymously(auth);
+                                } catch (e) {
+                                    console.error("Anonymous sign-in error:", e);
+                                }
+                            } else {
+                                nicknameInput.focus();
                             }
-                        } else {
-                            nicknameInput.focus();
                         }
                     });
 
@@ -7367,79 +7309,103 @@
                         if (user) {
                             nicknameModalOverlay.style.display = "none";
                             userId = user.uid;
+                            const isAnon = user.isAnonymous;
                             console.log(
                                 "User authenticated:",
                                 userId,
                                 "Anonymous:",
-                                user.isAnonymous
+                                isAnon
                             );
 
-                            let savedNickname =
-                                localStorage.getItem(NICKNAME_STORAGE_KEY);
+                            const userRef = doc(nicknamesCol, userId);
+                            let userSnap = await getDoc(userRef);
                             let finalNickname = null;
 
-                            if (!user.isAnonymous) {
-                                if (user.displayName) {
-                                    finalNickname = user.displayName;
-                                } else if (savedNickname) {
-                                    finalNickname = savedNickname;
+                            if (userSnap.exists()) {
+                                // User document already exists
+                                const userDocData = userSnap.data();
+                                finalNickname = userDocData.nickname;
+                                userNickname = finalNickname; // Set global nickname
+                                localStorage.setItem(NICKNAME_STORAGE_KEY, userNickname);
+
+                                // Update isAnon status if it changed (e.g., anon to Google)
+                                if (userDocData.isAnon !== isAnon) {
+                                    await updateDoc(userRef, { isAnon: isAnon, last_seen: serverTimestamp() });
                                 } else {
-                                    finalNickname = `User_${userId.substring(
-                                        0,
-                                        4
-                                    )}`;
+                                    // Just update last_seen if status is the same
+                                    await updateDoc(userRef, { last_seen: serverTimestamp() });
                                 }
                             } else {
-                                if (savedNickname) {
-                                    finalNickname = savedNickname;
-                                }
-                            }
+                                // First-time login for this user, create document
+                                let savedNickname = localStorage.getItem(NICKNAME_STORAGE_KEY);
+                                let potentialNickname = null;
 
-                            if (finalNickname) {
-                                userNickname = finalNickname;
-                                localStorage.setItem(
-                                    NICKNAME_STORAGE_KEY,
-                                    userNickname
-                                );
-                            } else {
-                                let newNickname = await showModalPrompt(
-                                    nicknameModalOverlay,
-                                    nicknameInput,
-                                    saveNicknameBtn,
-                                    cancelNicknameBtn,
-                                    {
-                                        title: "Choose Nickname",
-                                        titleEl: nicknameModalTitle,
-                                        text: "Please choose a nickname to continue.",
-                                        textEl: nicknameModalOverlay.querySelector(
-                                            "p"
-                                        ),
-                                        defaultValue: user.isAnonymous
-                                            ? ""
-                                            : user.email ||
-                                              `User_${userId.substring(0, 4)}`,
-                                        placeholder: "Type your nickname...",
-                                        closeOnOverlayClick: false,
+                                if (!isAnon) {
+                                    // Google Sign-In
+                                    potentialNickname = user.displayName || savedNickname || `User_${userId.substring(0, 4)}`;
+                                } else {
+                                    // Anonymous Sign-In
+                                    potentialNickname = savedNickname || null;
+                                }
+
+                                // If no nickname (e.g., first-time anon), or if Google name is taken, we must prompt.
+                                let isTaken = potentialNickname ? await isNicknameTaken(potentialNickname, userId) : false;
+
+                                if (!potentialNickname || isTaken) {
+                                    let promptTitle = "Choose Nickname";
+                                    let promptText = "Please choose a nickname to continue.";
+                                    if (isTaken) {
+                                        promptTitle = "Nickname Taken";
+                                        promptText = `The nickname "${potentialNickname}" is already in use. Please choose a new one.`;
                                     }
-                                );
 
-                                if (
-                                    !newNickname ||
-                                    newNickname.trim() === ""
-                                ) {
-                                    newNickname = `User_${userId.substring(
-                                        0,
-                                        4
-                                    )}`;
+                                    let newNickname = null;
+                                    while (!newNickname || isTaken) {
+                                        newNickname = await showModalPrompt(
+                                            nicknameModalOverlay,
+                                            nicknameInput,
+                                            saveNicknameBtn,
+                                            cancelNicknameBtn,
+                                            {
+                                                title: promptTitle,
+                                                titleEl: nicknameModalTitle,
+                                                text: promptText,
+                                                textEl: nicknameModalOverlay.querySelector("p"),
+                                                defaultValue: isTaken ? "" : (potentialNickname || ""),
+                                                placeholder: "Type your nickname...",
+                                                closeOnOverlayClick: false,
+                                            }
+                                        );
+
+                                        if (!newNickname || newNickname.trim() === "") {
+                                            // User cancelled or submitted empty
+                                            // Let's force a default if they cancel/empty
+                                            newNickname = `User_${userId.substring(0, 4)}`;
+                                        }
+                                        finalNickname = newNickname.trim();
+                                        isTaken = await isNicknameTaken(finalNickname, userId);
+
+                                        if (isTaken) {
+                                            promptTitle = "Nickname Taken";
+                                            promptText = `The nickname "${finalNickname}" is also taken. Please try another.`;
+                                        }
+                                    }
+                                } else {
+                                    finalNickname = potentialNickname;
                                 }
-                                userNickname = newNickname.trim();
-                                localStorage.setItem(
-                                    NICKNAME_STORAGE_KEY,
-                                    userNickname
-                                );
-                            }
 
-                            await updateBoardOwnership(userNickname, userId);
+                                // Save the new user document
+                                await setDoc(userRef, {
+                                    nickname: finalNickname,
+                                    isAnon: isAnon,
+                                    userId: userId, // Store userId in doc for easier queries
+                                    last_seen: serverTimestamp()
+                                });
+                                userNickname = finalNickname;
+                                localStorage.setItem(NICKNAME_STORAGE_KEY, userNickname);
+                            }
+                            
+                            // await updateBoardOwnership(userNickname, userId); // This was flawed, logic is in changeNicknameBtn
 
                             const urlParams = new URLSearchParams(
                                 window.location.search
