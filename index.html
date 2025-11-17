@@ -36,6 +36,8 @@
                 top: -10000px;
                 left: -10000px;
                 overflow: visible;
+                transform: translateZ(0);
+                will-change: transform;
             }
 
             #svg-layer-connections {
@@ -210,6 +212,7 @@
                 border: 1px solid rgba(255,255,255,0.1);
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
                 user-select: none;
+                backface-visibility: hidden;
             }
 
             .item-transition {
@@ -806,8 +809,6 @@
             body.read-only #board-menu-add-paste {
                 display: none !important;
             }
-
-            /* Bloco removido */
 
             body.read-only #item-menu-bring-front,
             body.read-only #item-menu-send-back {
@@ -2825,13 +2826,22 @@
                                     }
                                 }
                                 if (change.type === 'modified') {
+                                    const data = change.doc.data();
+                                    const id = change.doc.id;
                                     const item = items.get(id);
+                                    
                                     if (item) {
-                                        
-                                        if (isDragging && selectedItems.has(id)) {
+                                        const oldData = item.data;
+
+                                        const isMyDrag = isDragging && selectedItems.has(id);
+
+                                        if (isMyDrag) {
+                                            item.el.style.left = data.x;
+                                            item.el.style.top = data.y;
+                                            item.el.style.width = data.width;
+                                            item.el.style.height = data.height;
                                             item.el.style.zIndex = data.zIndex;
                                         } else {
-                                            
                                             const oldX = item.el.style.left;
                                             const oldY = item.el.style.top;
                                             const newX = data.x;
@@ -2890,13 +2900,19 @@
                                             captionEl.style.fontSize = data.fontSize;
                                         }
                                         else if (data.type === 'timeline') {
-                                            const oldData = item.data;
-                                            if (JSON.stringify(oldData.events) !== JSON.stringify(data.events) ||
-                                                oldData.mainColor !== data.mainColor ||
-                                                oldData.mode !== data.mode ||
-                                                oldData.direction !== data.direction) 
-                                            {
-                                                renderTimelineSVG(item.el.querySelector('svg'), item.el, data);
+                                            const onlyPosChanged = data.width === oldData.width &&
+                                                data.height === oldData.height &&
+                                                JSON.stringify(data.events) === JSON.stringify(oldData.events) &&
+                                                data.mainColor === oldData.mainColor &&
+                                                data.mode === oldData.mode &&
+                                                data.direction === oldData.direction;
+
+                                            const somethingChanged = !onlyPosChanged || (data.x !== oldData.x || data.y !== oldData.y);
+
+                                            const skipRenderAutoSize = !isMyDrag && onlyPosChanged;
+
+                                            if (somethingChanged) {
+                                                renderTimelineSVG(item.el.querySelector('svg'), item.el, data, skipRenderAutoSize);
                                             }
                                         }
                                         item.data = data;
@@ -5354,7 +5370,7 @@
                         }
                     }
 
-                    function renderTimelineSVG(svgEl, itemEl, data) {
+                    function renderTimelineSVG(svgEl, itemEl, data, skipAutoSize = false) {
                         if (!svgEl || !itemEl) return;
 
                         const w = parseFloat(data.width);
@@ -5552,7 +5568,7 @@
                         const needsWidthUpdate = (data.mode === 'vertical' && Math.abs(newW_px - w) > 1);
                         const needsHeightUpdate = (data.mode === 'horizontal' && Math.abs(newH_px - h) > 1);
 
-                        if ((needsWidthUpdate || needsHeightUpdate) && !isResizing && !isMovingTimelineEvent && !isResizingTimelineEvent) {
+                        if ((needsWidthUpdate || needsHeightUpdate) && !isResizing && !isMovingTimelineEvent && !isResizingTimelineEvent && !skipAutoSize) {
                             if (typeof itemsCol !== 'undefined' && itemsCol) {
                                 try {
                                     const itemRef = doc(itemsCol, itemEl.id);
@@ -6418,14 +6434,6 @@
                     presenceInterval = null;
 
                     try {
-                        // We no longer delete the user doc, just let last_seen go stale
-                        // if (userRef) {
-                        //     const userSnap = await getDoc(userRef);
-                        //     if (userSnap.exists() && !userSnap.data().kicked) {
-                        //         await deleteDoc(userRef);
-                        //     }
-                        // }
-
                         if (nicknameRef) {
                             await setDoc(nicknameRef, {
                                 currentUserId: deleteField(),
@@ -7352,7 +7360,6 @@
                     logoutGuestBtn.addEventListener('click', async () => {
                         try {
                             await auth.signOut();
-                            // onAuthStateChanged will handle the rest (show login modal)
                         } catch (e) {
                             console.error("Error signing out:", e);
                         }
@@ -7449,17 +7456,14 @@
                             }
                         } else {
                             console.log("No user signed in.");
-                            // Detach any existing listeners from the previous session
                             detachListeners();
 
-                            // Hide board UI
                             document.querySelector('header').style.display = 'none';
                             document.querySelector('footer').style.display = 'none';
                             toggleSidebarBtn.style.display = 'none';
                             document.getElementById('center-board-btn').style.display = 'none';
-                            lobbyModalOverlay.style.display = 'none'; // Hide lobby just in case
+                            lobbyModalOverlay.style.display = 'none';
 
-                            // Show the login modal
                             nicknameModalOverlay.style.display = "flex";
                         }
                     });
