@@ -2474,7 +2474,7 @@
                         app = initializeApp(firebaseConfig);
                         db = getFirestore(app);
                         auth = getAuth(app);
-                        nicknamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'nicknamePasswords');
+                        nicknamesCol = collection(db, 'artifacts', appId, 'public', 'data', 'users');
                         setLogLevel('Debug');
                     } catch (e) {
                         console.error("Firebase initialization error:", e);
