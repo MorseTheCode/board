@@ -7404,8 +7404,6 @@
                                 userNickname = finalNickname;
                                 localStorage.setItem(NICKNAME_STORAGE_KEY, userNickname);
                             }
-                            
-                            // await updateBoardOwnership(userNickname, userId); // This was flawed, logic is in changeNicknameBtn
 
                             const urlParams = new URLSearchParams(
                                 window.location.search
@@ -7413,7 +7411,7 @@
                             const urlBoardId = urlParams.get('board') || null;
                             const urlInviteToken = urlParams.get('invite') || null;
 
-                            if (urlBoardId && urlBoardId !== "default-board") {
+                            if (urlBoardId) {
                                 loadBoard(urlBoardId, urlInviteToken);
                             } else {
                                 showLobby();
