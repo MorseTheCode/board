@@ -2055,7 +2055,6 @@
                         Create
                     </button>
                 </div>
-                <!-- REMOVE the old checkbox div from here -->
             </div>
         </div>
 
@@ -2121,7 +2120,7 @@
                     const drawingGroup = document.getElementById('drawing-group');
                     const tempDrawingGroup = document.getElementById('temp-drawing-group');
                     const selectionBox = document.getElementById('selection-box');
-                    const svgBgRect = document.getElementById('svg-bg-rect'); // Added this line
+                    const svgBgRect = document.getElementById('svg-bg-rect');
 
                     const addImageInput = document.getElementById('add-image-input');
 
@@ -2254,7 +2253,7 @@
                     const kickedOkBtn = document.getElementById('kicked-ok-btn');
 
                     const deletedModalOverlay = document.getElementById('deleted-modal-overlay');
-                    const deletedOkBtn = document.getElementById('deleted-ok-btn'); // (NOVO) Variável para o novo botão
+                    const deletedOkBtn = document.getElementById('deleted-ok-btn');
 
                     const invalidInviteModalOverlay = document.getElementById('invalid-invite-modal-overlay');
                     const invalidInviteOkBtn = document.getElementById('invalid-invite-ok-btn');
@@ -2306,8 +2305,8 @@
                     const sidebarItemList = document.getElementById('sidebar-item-list');
                     const toggleSidebarBtn = document.getElementById('toggle-sidebar-button');
                     const closeSidebarBtn = document.getElementById('close-sidebar-button');
-                    const sidebarSearchInput = document.getElementById('sidebar-search-input'); // ADDED
-                    const centerBoardBtn = document.getElementById('center-board-btn'); // ADDED
+                    const sidebarSearchInput = document.getElementById('sidebar-search-input');
+                    const centerBoardBtn = document.getElementById('center-board-btn');
 
                     let app, db, auth, userId;
                     let itemsCol, connectionsCol, drawingsCol, usersCol, backupsCol, invitesCol, boardRef;
@@ -2332,6 +2331,8 @@
                     let pendingRoomName = '', pendingHasPassword = false;
                     let isVoluntarilyLeaving = false;
                     let isSwitchingRooms = false;
+
+                    let animationFrameMap = new Map();
 
                     const NICKNAME_STORAGE_KEY = 'evidenceBoardNickname';
 
@@ -2422,6 +2423,9 @@
 
 
                     function detachListeners() {
+                        animationFrameMap.forEach(frameId => cancelAnimationFrame(frameId));
+                        animationFrameMap.clear();
+
                         if (unsubscribeItems) {
                             unsubscribeItems();
                             unsubscribeItems = null;
@@ -2777,11 +2781,29 @@
                                             if (oldX !== newX || oldY !== newY) {
                                                 item.el.classList.add('item-transition');
                                                 
+                                                if (animationFrameMap.has(id)) {
+                                                    cancelAnimationFrame(animationFrameMap.get(id));
+                                                }
+
+                                                function updateConnectionsDuringAnimation() {
+                                                    updateAllConnectionsForItem(id);
+                                                    animationFrameMap.set(id, requestAnimationFrame(updateConnectionsDuringAnimation));
+                                                }
+                                                
                                                 const onTransitionEnd = () => {
+                                                    if (animationFrameMap.has(id)) {
+                                                        cancelAnimationFrame(animationFrameMap.get(id));
+                                                        animationFrameMap.delete(id);
+                                                    }
                                                     item.el.classList.remove('item-transition');
                                                     item.el.removeEventListener('transitionend', onTransitionEnd);
+                                                    updateAllConnectionsForItem(id);
                                                 };
+                                                
+                                                item.el.removeEventListener('transitionend', onTransitionEnd); 
                                                 item.el.addEventListener('transitionend', onTransitionEnd);
+                                                
+                                                animationFrameMap.set(id, requestAnimationFrame(updateConnectionsDuringAnimation));
                                                 
                                                 item.el.style.left = newX;
                                                 item.el.style.top = newY;
@@ -2819,7 +2841,9 @@
                                             }
                                         }
                                         item.data = data;
-                                        updateAllConnectionsForItem(id);
+                                        if (!item.el.classList.contains('item-transition')) {
+                                            updateAllConnectionsForItem(id);
+                                        }
                                     }
                                     if(data.type === 'note' || data.type === 'image') {
                                         itemsChanged = true;
@@ -2977,7 +3001,6 @@
                    async function handleKick() {
                         console.log("handleKick triggered");
 
-                        // Add this check
                         if (isVoluntarilyLeaving) {
                             console.log("handleKick aborted, user is voluntarily leaving.");
                             return;
@@ -3557,7 +3580,6 @@
                             const timelineModeClass = data.mode === 'vertical' ? 'timeline-vertical' : 'timeline-horizontal';
                             
                             contentHtml = `
-                                <!-- THIS WRAPPER CLIPS THE SVG -->
                                 <div class="timeline-svg-container" style="width: 100%; height: 100%; overflow: hidden; border-radius: 16px;">
                                     <svg class="timeline-svg ${timelineModeClass}" preserveAspectRatio="none"></svg>
                                 </div>
@@ -3588,6 +3610,10 @@
                     }
 
                     function removeItemLocally(id) {
+                        if (animationFrameMap.has(id)) {
+                            cancelAnimationFrame(animationFrameMap.get(id));
+                            animationFrameMap.delete(id);
+                        }
                         const item = items.get(id);
                         if (item) {
                             item.el.remove();
@@ -3771,7 +3797,6 @@
                         svgBgRect.setAttribute('y', svgRectPos.y);
                         svgBgRect.setAttribute('width', rectWidth_world);
                         svgBgRect.setAttribute('height', rectHeight_world);
-                        // --- End of new block ---
                     }
 
                     const SVG_ORIGIN_X = 10000;
@@ -3925,7 +3950,7 @@
                         const isImage = itemEl.classList.contains('item-image');
                         const isNote = itemEl.classList.contains('item-note');
                         const isNode = itemEl.classList.contains('item-node');
-                        const isTimeline = itemEl.classList.contains('item-timeline'); // ADD THIS
+                        const isTimeline = itemEl.classList.contains('item-timeline');
                         const captionEl = itemEl.querySelector('.caption');
 
                         const showFontControls = isNote || (isImage && captionEl && captionEl.style.display !== 'none');
@@ -4863,7 +4888,6 @@
                             }
                         } catch (e) {
                             console.error("Erro ao marcar a sala para exclusão:", e);
-                            // Mesmo que falhe, tenta continuar a exclusão
                         }
                         if (currentCleanupFunction) {
                             window.removeEventListener('beforeunload', currentCleanupFunction);
@@ -5326,7 +5350,7 @@
                                 ball.cx = itemPadding;
                                 ball.cy = mainLineCenterY;
                                 arrowPath = `M${w - itemPadding - arrowSize},${mainLineCenterY - arrowSize / 2} L${w - itemPadding},${mainLineCenterY} L${w - itemPadding - arrowSize},${mainLineCenterY + arrowSize / 2} Z`;
-                            } else { // r-l
+                            } else {
                                 line.x1 = w - itemPadding - ballRadius;
                                 line.x2 = itemPadding + arrowSize;
                                 ball.cx = w - itemPadding;
@@ -5711,7 +5735,7 @@
                                 const M_curr = midPoint(secondLast, last);
 
                                 const newSegment = `Q${secondLast.x},${secondLast.y} ${M_curr.x},${M_curr.y}`;
-                                currentFreehandPathString += " " + newSegment; // <-- ADD THIS LINE
+                                currentFreehandPathString += " " + newSegment;
 
                                 if (currentFreehandPathString) {
                                     currentFreehandPath.setAttribute('d', currentFreehandPathString);
@@ -6045,10 +6069,10 @@
                     });
 
                     function getElementCenter(element) {
-                        const worldLeft = parseFloat(element.style.left);
-                        const worldTop = parseFloat(element.style.top);
-
                         const computedStyle = window.getComputedStyle(element);
+                        const worldLeft = parseFloat(computedStyle.left);
+                        const worldTop = parseFloat(computedStyle.top);
+
                         const worldWidth = parseFloat(computedStyle.width);
                         const worldHeight = parseFloat(computedStyle.height);
 
@@ -6391,7 +6415,6 @@
                     
                     detachListeners();
 
-                    // Clear the board
                     items.forEach(item => item.el.remove());
                     items.clear();
                     connections.forEach(conn => {
@@ -6419,7 +6442,7 @@
 
                 } else {
                     console.log("leaveRoom called (kicked=false)");
-                    isVoluntarilyLeaving = true; // Set flag
+                    isVoluntarilyLeaving = true;
 
                     if (currentCleanupFunction) {
                         window.removeEventListener('beforeunload', currentCleanupFunction);
@@ -6658,7 +6681,7 @@
                             document.querySelector('header').style.display = 'flex';
                             document.querySelector('footer').style.display = 'flex';
                             toggleSidebarBtn.style.display = 'block';
-                            document.getElementById('center-board-btn').style.display = 'block'; // ADDED
+                            document.getElementById('center-board-btn').style.display = 'block';
 
                             if (inviteConsumed) {
                                 window.history.replaceState({}, document.title, `${window.location.pathname}?board=${currentBoardId}`);
@@ -6861,7 +6884,7 @@
                         document.querySelector('header').style.display = 'none';
                         document.querySelector('footer').style.display = 'none';
                         toggleSidebarBtn.style.display = 'none';
-                        document.getElementById('center-board-btn').style.display = 'none'; // ADDED
+                        document.getElementById('center-board-btn').style.display = 'none';
                         
                         lobbyModalOverlay.style.display = 'flex';
                         lobbyRoomList.innerHTML = `<li>Loading rooms...</li>`;
@@ -6989,7 +7012,7 @@
                             );
 
                             if (newPassword === null) {
-                                document.getElementById('new-board-hidden-checkbox').checked = false; // Reset on cancel
+                                document.getElementById('new-board-hidden-checkbox').checked = false;
                                 return;
                             }
 
@@ -7133,7 +7156,7 @@
                     
                     function renderSidebarList() {
                         const searchTerm = sidebarSearchInput.value.toLowerCase().trim();
-                        const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0); // Divide em palavras
+                        const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0);
 
                         sidebarItemList.innerHTML = '';
                         let itemCount = 0;
@@ -7197,7 +7220,7 @@
                 
                             li.innerHTML = `
                                 ${previewHTML}
-                                <span class="text-preview">${contentText.replace(/<[^>]*>?/gm, '')}</span> <!-- Remove HTML do texto -->
+                                <span class="text-preview">${contentText.replace(/<[^>]*>?/gm, '')}</span>
                             `;
                             sidebarItemList.appendChild(li);
                         });
@@ -7214,7 +7237,7 @@
 
                     toggleSidebarBtn.addEventListener('click', toggleSidebar);
                     closeSidebarBtn.addEventListener('click', toggleSidebar);
-                    sidebarSearchInput.addEventListener('input', renderSidebarList); // ADDED
+                    sidebarSearchInput.addEventListener('input', renderSidebarList);
                     
                     sidebarItemList.addEventListener('click', (e) => {
                         const itemEl = e.target.closest('.sidebar-item');
