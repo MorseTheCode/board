@@ -6412,14 +6412,8 @@
                     if (presenceInterval) clearInterval(presenceInterval);
                     presenceInterval = null;
 
-                    try {
-                        if (userRef) { 
-                            await deleteDoc(userRef);
-                            console.log("Cleanup: Removed user from board's user list.");
-                        }
-                    } catch (e) {
-                        console.error("Error during cleanup:", e);
-                    }
+                    console.log("Cleanup: Stopped presence interval. User will go offline.");
+
                 };
 
                 window.addEventListener('beforeunload', cleanup);
