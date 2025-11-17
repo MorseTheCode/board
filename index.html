@@ -1155,10 +1155,10 @@
                     <rect
                         id="svg-bg-rect"
                         fill="url(#dot-grid)"
-                        x="0"
-                        y="0"
-                        /* width="20000"
-                        /* height="20000"
+                        x="-50000"
+                        y="-50000"
+                        width="100000"
+                        height="100000"
                     />
                     <g id="drawing-group"></g>
                     <g id="temp-drawing-group"></g>
@@ -3660,7 +3660,8 @@
                         if (data.type === 'timeline') {
                             renderTimelineSVG(itemEl.querySelector('svg'), itemEl, data);
                         } else if (data.type === 'node') {
-                            updateTransform();
+                            const counterScale = 1 / scale;
+                            itemEl.style.transform = `scale(${counterScale})`;
                         }
 
                         setupItemEventListeners(itemEl, data.type);
@@ -3825,37 +3826,17 @@
                         }
                     });
                     fontSizeSlider.addEventListener('mousedown', (e) => e.stopPropagation());
-
-                    function updateTransform() {
-                        canvasContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-
+                    
+                    function updateNodeScaling() {
                         const nodes = document.querySelectorAll('.item-node');
                         const counterScale = 1 / scale;
                         nodes.forEach(node => {
                             node.style.transform = `scale(${counterScale})`;
                         });
+                    }
 
-                        const boardRect = board.getBoundingClientRect();
-                        const topLeftWorld = screenToWorld(boardRect.left, boardRect.top);
-                        const bottomRightWorld = screenToWorld(boardRect.right, boardRect.bottom);
-
-                        const viewWidthWorld = bottomRightWorld.x - topLeftWorld.x;
-                        const viewHeightWorld = bottomRightWorld.y - topLeftWorld.y;
-
-                        const bufferX = viewWidthWorld;
-                        const bufferY = viewHeightWorld;
-
-                        const rectX_world = topLeftWorld.x - bufferX;
-                        const rectY_world = topLeftWorld.y - bufferY;
-                        const rectWidth_world = viewWidthWorld + 2 * bufferX;
-                        const rectHeight_world = viewHeightWorld + 2 * bufferY;
-
-                        const svgRectPos = worldToSvg({ x: rectX_world, y: rectY_world });
-
-                        svgBgRect.setAttribute('x', svgRectPos.x);
-                        svgBgRect.setAttribute('y', svgRectPos.y);
-                        svgBgRect.setAttribute('width', rectWidth_world);
-                        svgBgRect.setAttribute('height', rectHeight_world);
+                    function updateTransform() {
+                        canvasContainer.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
                     }
 
                     const SVG_ORIGIN_X = 10000;
@@ -4340,6 +4321,7 @@
                         translateY = mouseY - mouseWorldY_before * scale;
 
                         updateTransform();
+                        updateNodeScaling();
                         updateEraserCursorSize();
                         updatePencilCursor();
 
