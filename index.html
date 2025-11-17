@@ -35,9 +35,7 @@
                 position: absolute;
                 top: -10000px;
                 left: -10000px;
-                /* width: 20000px; */ /* Removed */
-                /* height: 20000px; */ /* Removed */
-                overflow: visible; /* Added */
+                overflow: visible;
             }
 
             #svg-layer-connections {
@@ -120,9 +118,9 @@
                 display: flex; 
                 transform: translateX(100%);
                 z-index: 9000; 
-                /* ALTERAÇÃO: Trocado 64px por 4rem para ser relativo */
-                top: 4rem; /* 64px */
-                height: calc(100vh - 4rem); /* Era calc(100vh - 64px) */
+                top: 4rem;
+                height: calc(100vh - 4rem);
+                cursor: default;
             }
 
             #sidebar-menu.sidebar-open {
@@ -146,8 +144,8 @@
             }
 
             .sidebar-item .preview {
-                width: 48px; /* 3rem */
-                height: 48px; /* 3rem */
+                width: 48px;
+                height: 48px;
                 flex-shrink: 0;
                 border-radius: 6px;
                 background-color: #334155;
@@ -164,8 +162,8 @@
             }
             
             .sidebar-item .preview-icon {
-                width: 24px; /* 1.5rem */
-                height: 24px; /* 1.5rem */
+                width: 24px;
+                height: 24px;
                 color: #94a3b8;
             }
             .sidebar-item .text-preview {
@@ -212,6 +210,11 @@
                 border: 1px solid rgba(255,255,255,0.1);
                 transition: transform 0.2s ease, box-shadow 0.2s ease;
                 user-select: none;
+            }
+
+            .item-transition {
+                transition: left 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+                            top 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             }
 
             .item:hover {
@@ -336,11 +339,11 @@
             }
 
             .timeline-ball {
-                fill: #3b82f6; /* Default color */
+                fill: #3b82f6;
             }
 
             .timeline-arrow {
-                fill: #3b82f6; /* Default color */
+                fill: #3b82f6;
             }
 
             .timeline-event-line {
@@ -353,7 +356,6 @@
                 fill: white;
             }
 
-            /* ADDED: Styles for interactive handles */
             .timeline-event-move-handle,
             .timeline-event-resize-handle {
                 cursor: pointer;
@@ -370,17 +372,17 @@
             }
 
             .timeline-event-move-handle {
-                cursor: ew-resize; /* Horizontal move */
+                cursor: ew-resize;
             }
             .timeline-vertical .timeline-event-move-handle {
-                cursor: ns-resize; /* Vertical move */
+                cursor: ns-resize;
             }
 
             .timeline-event-resize-handle {
-                cursor: ns-resize; /* Vertical resize */
+                cursor: ns-resize;
             }
             .timeline-vertical .timeline-event-resize-handle {
-                cursor: ew-resize; /* Horizontal resize */
+                cursor: ew-resize;
             }
 
             .resize-handle-image, .resize-handle-note {
@@ -463,10 +465,10 @@
             }
 
             .item.item-note textarea[readonly] {
-                cursor: grab;
+                cursor: default;
             }
             .item.item-note:active textarea[readonly] {
-                cursor: grabbing;
+                cursor: default;
             }
             .item.item-note textarea:not([readonly]) {
                 box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
@@ -800,9 +802,12 @@
             body.read-only #board-menu-add-note,
             body.read-only #board-menu-add-image-label,
             body.read-only #board-menu-add-node,
-            body.read-only #board-menu-paste {
+            body.read-only #board-menu-add-timeline,
+            body.read-only #board-menu-add-paste {
                 display: none !important;
             }
+
+            /* Bloco removido */
 
             body.read-only #item-menu-bring-front,
             body.read-only #item-menu-send-back {
@@ -1152,8 +1157,8 @@
                         fill="url(#dot-grid)"
                         x="0"
                         y="0"
-                        /* width="20000" */ /* Removed */
-                        /* height="20000" */ /* Removed */
+                        /* width="20000"
+                        /* height="20000"
                     />
                     <g id="drawing-group"></g>
                     <g id="temp-drawing-group"></g>
@@ -1299,7 +1304,6 @@
                         </svg>
                     </button>
                 </div>
-                <!-- ADDED: Sidebar Search Input -->
                 <div class="p-4 border-b border-slate-700 flex-shrink-0">
                     <input type="text" id="sidebar-search-input" placeholder="Search items..." class="w-full bg-slate-700 text-white placeholder-slate-400 p-2 rounded-lg border border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                 </div>
@@ -1390,7 +1394,6 @@
             </svg>
         </button>
 
-        <!-- ADDED: Center Board Button -->
         <button
             id="center-board-btn"
             class="header-btn fixed bottom-12 left-6 z-30 transition-all duration-300 ease-in-out"
@@ -1862,7 +1865,7 @@
                     />
                 </div>
 
-                <div class="mb-4"> <!-- Alterei de mb-6 para mb-4 para consistência -->
+                <div class="mb-4">
                     <label class="flex items-center">
                         <input
                             type="checkbox"
@@ -1875,7 +1878,6 @@
                     </label>
                 </div>
                 
-                <!-- INÍCIO DA CORREÇÃO: Adicionar o checkbox 'Hidden' em falta -->
                 <div class="mb-6">
                     <label class="flex items-center">
                         <input
@@ -1888,7 +1890,6 @@
                         >
                     </label>
                 </div>
-                <!-- FIM DA CORREÇÃO -->
                 
                 <div class="flex justify-end gap-4">
                     <button id="cancel-board-settings-btn" class="header-btn">
@@ -2325,12 +2326,12 @@
                     let pendingKickUid = null;
                     let unsubscribeBoardsList = null;
                     let currentUserListHash = '';
-                    let userListCache = new Map(); // To track role changes
+                    let userListCache = new Map();
 
                     let allBoards = [];
                     let pendingRoomName = '', pendingHasPassword = false;
-                    let isVoluntarilyLeaving = false; // Flag to track voluntary leave
-                    let isSwitchingRooms = false; // Flag para impedir kick ao trocar de sala
+                    let isVoluntarilyLeaving = false;
+                    let isSwitchingRooms = false;
 
                     const NICKNAME_STORAGE_KEY = 'evidenceBoardNickname';
 
@@ -2450,7 +2451,7 @@
                             unsubscribeBoardsList = null;
                         }
 
-                        userListCache.clear(); // Clear the user cache
+                        userListCache.clear();
 
                         console.log("Detached all Firestore listeners.");
                     }
@@ -2524,18 +2525,6 @@
                                 nicknamePasswordInputEl.classList.remove('border-red-500', 'focus:ring-red-500');
                                 nicknamePasswordInputEl.classList.add('border-slate-600', 'focus:ring-indigo-500');
                             } else {
-                                /*
-                                await showModalAlert(
-                                    errorModalOverlay,
-                                    errorModalOkBtn,
-                                    {
-                                        title: "Password Incorrect",
-                                        titleEl: errorModalTitle,
-                                        text: "The password you entered is incorrect. Please try again.",
-                                        textEl: errorModalText
-                                    }
-                                );
-                                */
                                 nicknamePasswordError.textContent = 'Wrong password';
                                 nicknamePasswordError.style.display = 'block';
                                 nicknamePasswordInputEl.classList.remove('border-slate-600', 'focus:ring-indigo-500');
@@ -2775,11 +2764,36 @@
                                 if (change.type === 'modified') {
                                     const item = items.get(id);
                                     if (item) {
-                                        item.el.style.left = data.x;
-                                        item.el.style.top = data.y;
-                                        item.el.style.width = data.width;
-                                        item.el.style.height = data.height;
-                                        item.el.style.zIndex = data.zIndex;
+                                        
+                                        if (isDragging && selectedItems.has(id)) {
+                                            item.el.style.zIndex = data.zIndex;
+                                        } else {
+                                            
+                                            const oldX = item.el.style.left;
+                                            const oldY = item.el.style.top;
+                                            const newX = data.x;
+                                            const newY = data.y;
+
+                                            if (oldX !== newX || oldY !== newY) {
+                                                item.el.classList.add('item-transition');
+                                                
+                                                const onTransitionEnd = () => {
+                                                    item.el.classList.remove('item-transition');
+                                                    item.el.removeEventListener('transitionend', onTransitionEnd);
+                                                };
+                                                item.el.addEventListener('transitionend', onTransitionEnd);
+                                                
+                                                item.el.style.left = newX;
+                                                item.el.style.top = newY;
+                                            } else {
+                                                item.el.style.left = newX;
+                                                item.el.style.top = newY;
+                                            }
+                                            
+                                            item.el.style.width = data.width;
+                                            item.el.style.height = data.height;
+                                            item.el.style.zIndex = data.zIndex;
+                                        }
 
                                         if (data.type === 'note') {
                                             const textarea = item.el.querySelector('textarea');
@@ -2931,7 +2945,7 @@
                             
                             if (!doc.exists()) {
                                 await handleKick();
-                            } else if (doc.data().kicked === true) { // Check for explicit kick
+                            } else if (doc.data().kicked === true) {
                                 await handleKick();
                             }
                         });
@@ -2969,13 +2983,11 @@
                             return;
                         }
 
-                        // ADICIONADO: Impede o kick durante a troca de sala
                         if (isSwitchingRooms) {
                             console.log("handleKick aborted, user is switching rooms.");
                             return;
                         }
 
-                        // --- INÍCIO DA ALTERAÇÃO: Verificar se a sala foi deletada ---
                         if (currentCleanupFunction) {
                             window.removeEventListener('beforeunload', currentCleanupFunction);
                             window.removeEventListener('pagehide', currentCleanupFunction);
@@ -3195,7 +3207,6 @@
                        settingsBoardName.textContent = currentBoardId;
                        boardPasswordChangeInput.value = '';
                        removePasswordCheckbox.checked = false;
-                       // Set the 'hidden' checkbox state
                        document.getElementById('board-settings-hidden-checkbox').checked = currentHiddenStatus;
 
                        boardSettingsModalOverlay.style.display = 'flex';
@@ -3245,7 +3256,6 @@
                                 updateData.password = await sha512(newPassword);
                             }
 
-                            // Só envia a atualização se houver algo para mudar
                             if (Object.keys(updateData).length > 0) {
                                 await updateDoc(boardMetaRef, updateData);
                             }
@@ -3740,7 +3750,6 @@
                             node.style.transform = `scale(${counterScale})`;
                         });
 
-                        // --- Add this block to dynamically resize the background ---
                         const boardRect = board.getBoundingClientRect();
                         const topLeftWorld = screenToWorld(boardRect.left, boardRect.top);
                         const bottomRightWorld = screenToWorld(boardRect.right, boardRect.bottom);
@@ -3748,7 +3757,6 @@
                         const viewWidthWorld = bottomRightWorld.x - topLeftWorld.x;
                         const viewHeightWorld = bottomRightWorld.y - topLeftWorld.y;
 
-                        // Add a buffer (100% of viewport size on each side)
                         const bufferX = viewWidthWorld;
                         const bufferY = viewHeightWorld;
 
@@ -3925,7 +3933,6 @@
                         if (canEdit) {
                             itemMenuFontBtn.style.display = showFontControls ? 'flex' : 'none';
                             fontSizeContainer.style.display = showFontControls ? 'block' : 'none';
-                            // MODIFIED THIS LINE
                             itemMenuConnectBtn.style.display = (isNode || isNote || isImage || isTimeline) ? 'flex' : 'none';
                             itemMenuDeleteNodeBtn.style.display = isNode ? 'flex' : 'none';
                             itemMenuBringFrontBtn.style.display = 'flex';
@@ -4113,6 +4120,10 @@
 
                     board.addEventListener('contextmenu', (e) => {
                         e.preventDefault();
+
+                        if (!canEdit) {
+                            return;
+                        }
 
                         const target = e.target;
                         const isControl = target.classList.contains('delete-btn') ||
@@ -4434,10 +4445,7 @@
                             itemData.mainColor = "#3b82f6";
                             itemData.mode = "horizontal";
                             itemData.direction = "l-r";
-                            itemData.events = [
-                                { id: crypto.randomUUID(), position: 0.2, text: "Event 1", color: "#e11d48", lineLength: 40 },
-                                { id: crypto.randomUUID(), position: 0.6, text: "Event 2", color: "#16a34a", image: "https://placehold.co/100x50/334155/e2e8f0?text=IMG", lineLength: 50 }
-                            ];
+                            itemData.events = [];
                         }
 
                         try {
@@ -4493,6 +4501,11 @@
                         itemEl.addEventListener('contextmenu', (e) => {
                             e.preventDefault();
                             e.stopPropagation();
+
+                            if (!canEdit) {
+                                return;
+                            }
+
                             const target = e.target;
                             const isControl = target.classList.contains('delete-btn') ||
                                               target.closest('.delete-btn') ||
@@ -4504,7 +4517,6 @@
                                               target.closest('.resize-handle-image') ||
                                               target.classList.contains('move-handle-note') ||
                                               target.closest('.move-handle-note');
-                                              // REMOVED timeline handles from here
 
                             if (isControl) return;
                             showItemMenu(itemEl, e);
@@ -4572,20 +4584,16 @@
                                 openTimelineConfigModal(itemEl);
                             });
                             
-                            // --- MODIFICATION: Find the SVG container, not the SVG itself ---
                             const svgContainer = itemEl.querySelector('.timeline-svg-container');
                             
-                            // --- REPLACED mousedown listener (now on container) ---
                             svgContainer.addEventListener('mousedown', (e) => {
                                 if (e.button !== 0) return;
-                                e.stopPropagation(); // ALWAYS stop propagation to parent item
+                                e.stopPropagation();
 
                                 const target = e.target.closest('[data-event-id]') || e.target;
                                 const eventId = target.dataset.eventId;
                                 
                                 if (eventId && canEdit) {
-                                    // --- Clicked on a HANDLE ---
-                                    // Start handle drag logic
                                     const itemData = items.get(itemEl.id).data;
                                     const event = itemData.events.find(ev => ev.id === eventId);
                                     if (!event) return;
@@ -4597,7 +4605,7 @@
                                         eventId: eventId,
                                         isAlt: target.dataset.isAlt === 'true',
                                         startPos_world: screenToWorld(e.clientX, e.clientY),
-                                        startPosition: event.position || 0.5, // --- MODIFICATION: Added fallback ---
+                                        startPosition: event.position || 0.5,
                                         startLineLength: event.lineLength || 40
                                     };
 
@@ -4616,26 +4624,20 @@
                                     if (cursorMode === 'move' || (cursorMode === 'draw' && canEdit)) {
                                         onItemDragStart(e, itemEl);
                                     }
-                                    e.stopPropagation(); // <-- ADD THIS LINE
+                                    e.stopPropagation();
                                 }
                             });
 
-                            // --- ADDED THIS LISTENER (on container) ---
                             svgContainer.addEventListener('contextmenu', (e) => {
                                 e.preventDefault();
-                                e.stopPropagation(); // Stop board context menu
-                                showItemMenu(itemEl, e); // Manually show item menu
-                            });
-
-                            // --- REMOVE THIS BLOCK ---
-                            svgContainer.addEventListener('dblclick', (e) => {
-                                if (!canEdit) return;
                                 e.stopPropagation();
-                                // TODO: Add event point by double clicking
-                                console.log("Add timeline event point for", itemEl.id);
-                                alert("Adding timeline points not yet implemented. Please use the Edit (pencil) button.");
+
+                                if (!canEdit) {
+                                    return;
+                                }
+
+                                showItemMenu(itemEl, e);
                             });
-                            // --- END REMOVE BLOCK ---
                         }
 
                         if (type !== 'node') {
@@ -4704,7 +4706,7 @@
                         closeAllPopups();
                     });
 
-                    boardMenuAddTimelineBtn.addEventListener('click', () => { // ADD THIS BLOCK
+                    boardMenuAddTimelineBtn.addEventListener('click', () => {
                         if (!canEdit) return;
                         createItem('timeline', '', lastMousePos.x, lastMousePos.y);
                         closeAllPopups();
@@ -4816,7 +4818,6 @@
                             console.error("Error clearing nodes:", e);
             }
 
-            // ADDED: Clear timelines
             try {
                 const q = query(itemsCol, where('type', '==', 'timeline'));
                 const snapshot = await getDocs(q);
@@ -4856,7 +4857,6 @@
                     confirmDeleteRoomBtn.addEventListener('click', async () => {
                         if (!isBoardOwner) return;
 
-                        // --- INÍCIO DA ALTERAÇÃO: Marcar a sala para exclusão PRIMEIRO ---
                         try {
                             if (boardRef) {
                                 await updateDoc(boardRef, { status: 'deleting' });
@@ -4865,11 +4865,6 @@
                             console.error("Erro ao marcar a sala para exclusão:", e);
                             // Mesmo que falhe, tenta continuar a exclusão
                         }
-                        // --- FIM DA ALTERAÇÃO ---
-
-                        // --- INÍCIO DA CORREÇÃO ---
-                        // Parar toda a atividade de fundo (intervalo de presença) ANTES de deletar
-                        // Isso impede que o intervalo recrie o documento do usuário
                         if (currentCleanupFunction) {
                             window.removeEventListener('beforeunload', currentCleanupFunction);
                             window.removeEventListener('pagehide', currentCleanupFunction);
@@ -4878,35 +4873,25 @@
                             clearInterval(presenceInterval);
                             presenceInterval = null;
                         }
-                        currentCleanupFunction = () => {}; // Limpa a função de cleanup
-                        // --- FIM DA CORREÇÃO ---
+                        currentCleanupFunction = () => {};
 
                         try {
                             await clearAllBoard(true);
 
-                            // --- INÍCIO DA CORREÇÃO ---
-                            // Temos que apagar manualmente o conteúdo das sub-coleções
-                            // antes de apagar o documento principal (boardRef).
-                            // A clearAllBoard não limpa users, backups, ou invites.
-
-                            // Apagar todos os utilizadores (users)
                             if (usersCol) {
                                 const usersSnap = await getDocs(usersCol);
-                                await batchDelete(usersCol, usersSnap); // Reutiliza a sua função batchDelete
+                                await batchDelete(usersCol, usersSnap);
                             }
 
-                            // Apagar todos os backups
                             if (backupsCol) {
                                 const backupsSnap = await getDocs(backupsCol);
                                 await batchDelete(backupsCol, backupsSnap);
                             }
 
-                            // Apagar todos os convites (invites)
                             if (invitesCol) {
                                 const invitesSnap = await getDocs(invitesCol);
                                 await batchDelete(invitesCol, invitesSnap);
                             }
-                            // --- FIM DA CORREÇÃO ---
 
                             if (boardRef) {
                                 await deleteDoc(boardRef);
@@ -4914,24 +4899,8 @@
 
                             deleteRoomModalOverlay.style.display = 'none';
                             
-                            // --- LÓGICA MOVIDA PARA O TOPO ---
-                            /*
-                            // 1. Parar o intervalo de presença e os listeners de 'unload'
-                            if (currentCleanupFunction) {
-                                window.removeEventListener('beforeunload', currentCleanupFunction);
-                                window.removeEventListener('pagehide', currentCleanupFunction);
-                            }
-                            if (presenceInterval) {
-                                clearInterval(presenceInterval);
-                                presenceInterval = null;
-                            }
-                            currentCleanupFunction = () => {}; // Limpa a função de cleanup
-                            */
-                            
-                            // 2. Desconectar todos os listeners do Firestore
                             detachListeners();
 
-                            // 3. Limpar a UI do quadro local
                             items.forEach(item => item.el.remove());
                             items.clear();
                             connections.forEach(conn => {
@@ -4943,25 +4912,20 @@
                             drawingGroup.innerHTML = '';
                             itemConnectionsMap.clear();
 
-                            // 4. Esconder a UI do quadro (header/footer)
                             document.querySelector('header').style.display = 'none';
                             document.querySelector('footer').style.display = 'none';
                             toggleSidebarBtn.style.display = 'none';
-                            document.getElementById('center-board-btn').style.display = 'none'; // ADDED
+                            document.getElementById('center-board-btn').style.display = 'none';
 
-                            // 5. Resetar o estado
                             currentBoardId = null;
                             isBoardOwner = false;
                             canEdit = false;
 
-                            // 6. Mostrar o Lobby (o objetivo final)
                             showLobby();
-                            // --- FIM DA CORREÇÃO ---
 
                         } catch (e) {
                             console.error("Error deleting room:", e);
                             deleteRoomModalOverlay.style.display = 'none';
-                            // Se der erro, também vai para o lobby
                             showLobby();
                         }
                     });
@@ -5324,47 +5288,35 @@
                             });
                         }
                     }
-                    /**
-                     * Renders the content of a timeline's SVG element, dynamically calculating and
-                     * updating the item's dimensions to accommodate its content.
-                     * @param {SVGElement} svgEl The <svg> element inside the timeline item.
-                     * @param {HTMLElement} itemEl The parent .item-timeline element.
-                     * @param {object} data The timeline's data from Firestore.
-                     */
+
                     function renderTimelineSVG(svgEl, itemEl, data) {
                         if (!svgEl || !itemEl) return;
 
-                        // Get the base dimensions from the item's data
                         const w = parseFloat(data.width);
                         const h = parseFloat(data.height);
-                        svgEl.innerHTML = ''; // Clear old content
+                        svgEl.innerHTML = '';
 
-                        // Add class for CSS cursor styling (horizontal/vertical)
                         const timelineModeClass = data.mode === 'vertical' ? 'timeline-vertical' : 'timeline-horizontal';
                         svgEl.setAttribute('class', `timeline-svg ${timelineModeClass}`);
 
-                        // --- Configuration Constants ---
                         const mainColor = data.mainColor || '#3b82f6';
                         const strokeWidth = 4;
                         const ballRadius = 8;
                         const arrowSize = 10;
                         const handleRadius = 5;
                         const textOffset = 10;
-                        const imagePadding = 5; // Padding between text and image
-                        const itemPadding = 20; // Padding from the SVG edges
+                        const imagePadding = 5;
+                        const itemPadding = 20;
 
-                        // --- Main Line & Bounds Initialization ---
                         let line = { x1: 0, y1: 0, x2: 0, y2: 0 };
                         let ball = { cx: 0, cy: 0 };
                         let arrowPath = "";
                         let mainLineCenterY, mainLineCenterX;
 
-                        // These track the min/max coordinates of the content
                         let minContentX = 0, maxContentX = w;
                         let minContentY = 0, maxContentY = h;
 
                         if (data.mode === 'horizontal') {
-                            // Start with a default center, this will be corrected by content
                             mainLineCenterY = h / 2;
                             line.y1 = line.y2 = mainLineCenterY;
                             
@@ -5381,13 +5333,11 @@
                                 ball.cy = mainLineCenterY;
                                 arrowPath = `M${itemPadding + arrowSize},${mainLineCenterY - arrowSize / 2} L${itemPadding},${mainLineCenterY} L${itemPadding + arrowSize},${mainLineCenterY + arrowSize / 2} Z`;
                             }
-                            // Initialize bounds with main line
                             minContentY = mainLineCenterY - ballRadius;
                             maxContentY = mainLineCenterY + ballRadius;
                             minContentX = 0;
                             maxContentX = w;
-                        } else { // vertical
-                            // Start with a default center
+                        } else {
                             mainLineCenterX = w / 2;
                             line.x1 = line.x2 = mainLineCenterX;
                             
@@ -5397,22 +5347,19 @@
                                 ball.cx = mainLineCenterX;
                                 ball.cy = itemPadding;
                                 arrowPath = `M${mainLineCenterX - arrowSize / 2},${h - itemPadding - arrowSize} L${mainLineCenterX},${h - itemPadding} L${mainLineCenterX + arrowSize / 2},${h - itemPadding - arrowSize} Z`;
-                            } else { // b-t
+                            } else {
                                 line.y1 = h - itemPadding - ballRadius;
                                 line.y2 = itemPadding + arrowSize;
                                 ball.cx = mainLineCenterX;
                                 ball.cy = h - itemPadding;
                                 arrowPath = `M${mainLineCenterX - arrowSize / 2},${itemPadding + arrowSize} L${mainLineCenterX},${itemPadding} L${mainLineCenterX + arrowSize / 2},${itemPadding + arrowSize} Z`;
                             }
-                            // Initialize bounds with main line
                             minContentX = mainLineCenterX - ballRadius;
                             maxContentX = mainLineCenterX + ballRadius;
                             minContentY = 0;
                             maxContentY = h;
                         }
-                        
-                        // --- 1. Measure and Calculate Event Data ---
-                        // We loop through events once to calculate their positions and required bounds
+
                         const eventsData = (data.events || []).map((event, index) => {
                             const eventColor = event.color || '#FFFFFF';
                             const eventLineLength = event.lineLength || 40;
@@ -5423,8 +5370,6 @@
                             let imagePos = { x: 0, y: 0 };
                             const isAlt = index % 2 === 0;
 
-                            // --- Create Text Element (for BBox calculation) ---
-                            // We must add it to the SVG to be able to measure it
                             let textEl = null;
                             if (event.text) {
                                 textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -5434,26 +5379,22 @@
                                 const lines = event.text.split('\n');
                                 lines.forEach((line, i) => {
                                     const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-                                    tspan.textContent = line || ' '; // Use a space for empty lines
-                                    tspan.setAttribute('x', 0); // We'll set the real x on the parent 'text'
-                                    tspan.setAttribute('dy', (i === 0) ? '0' : '1.2em'); // Line spacing
+                                    tspan.textContent = line || ' ';
+                                    tspan.setAttribute('x', 0);
+                                    tspan.setAttribute('dy', (i === 0) ? '0' : '1.2em');
                                     textEl.appendChild(tspan);
                                 });
                                 
                                 svgEl.appendChild(textEl);
                             }
-                            
-                            // Get the measured bounding box
+
                             const textBBox = textEl ? textEl.getBBox() : { x: 0, y: 0, width: 0, height: 0 };
                             const textHeight = textBBox.height;
                             const textWidth = textBBox.width;
                             
-                            // --- Adicionado ---
                             const linesCount = textEl ? textEl.querySelectorAll('tspan').length : 1;
                             const singleLineHeight = (linesCount > 0) ? (textHeight / linesCount) : 0;
-                            // --- Fim Adicionado ---
                             
-                            // --- Calculate positions based on mode ---
                             if (data.mode === 'horizontal') {
                                 const mainLineWidth = line.x2 - line.x1;
                                 eventPos.x = line.x1 + (mainLineWidth * event.position);
@@ -5467,28 +5408,19 @@
                                 textPos.x = eventLine.x2;
                                 textAnchor = 'middle';
                                 
-                                imagePos.x = eventLine.x2 - 50; // 50 = half image width
+                                imagePos.x = eventLine.x2 - 50;
 
-                                if (isAlt) { // Top side
-                                    // Image is on top
+                                if (isAlt) {
                                     imagePos.y = eventLine.y2 - (event.image ? 50 : 0) - (textHeight > 0 ? textHeight : 0) - (event.image && event.text ? imagePadding : 0);
                                     
-                                    // --- CORREÇÃO ---
-                                    // Posição base (onde a última linha deve ficar)
                                     const baseTextY = event.image ? (imagePos.y + 50 + imagePadding + (textHeight > 0 ? (singleLineHeight * 0.85) : 0)) : (eventLine.y2 - textOffset);
-                                    // Ajusta o Y para que a baseline da *primeira* linha seja movida para cima
-                                    // de forma que a baseline da *última* linha termine em 'baseTextY'.
-                                    // Subtrai a altura total (textHeight) e adiciona a altura de uma linha (singleLineHeight)
                                     textPos.y = baseTextY - textHeight + singleLineHeight;
-                                    // --- FIM CORREÇÃO ---
                                     
-                                } else { // Bottom side
-                                    // Text is on bottom
-                                    textPos.y = eventLine.y2 + 15 + textOffset; // <-- OK (já é a primeira linha)
-                                    // Image is below text
+                                } else {
+                                    textPos.y = eventLine.y2 + 15 + textOffset;
                                     imagePos.y = textPos.y + (textHeight > 0 ? textHeight : 0) + (event.image && event.text ? imagePadding : 0);
                                 }
-                            } else { // Vertical mode
+                            } else {
                                 const mainLineHeight = line.y2 - line.y1;
                                 eventPos.x = mainLineCenterX;
                                 eventPos.y = line.y1 + (mainLineHeight * event.position);
@@ -5498,85 +5430,66 @@
                                 eventLine.x2 = isAlt ? (eventPos.x - eventLineLength) : (eventPos.x + eventLineLength);
                                 eventLine.y2 = eventPos.y;
                                 
-                                // --- CORREÇÃO ---
-                                // textPos.y = eventLine.y2 + 5; // Y antigo
-                                // Calcula o centro vertical do BBox (relativo à baseline 0)
                                 const textCenterYOffset = textBBox.y + (textHeight / 2);
-                                // Define o Y da baseline da primeira linha para que o centro do bloco se alinhe a eventLine.y2
                                 textPos.y = eventLine.y2 - textCenterYOffset;
-                                // --- FIM CORREÇÃO ---
                                 
-                                if (isAlt) { // Left side
+                                if (isAlt) {
                                     textAnchor = 'end';
                                     textPos.x = eventLine.x2 - textOffset;
-                                    // Image is to the left of text
                                     imagePos.x = textPos.x - (textWidth > 0 ? textWidth : 0) - (event.image && event.text ? imagePadding : 0) - (event.image ? 100 : 0);
-                                } else { // Right side
+                                } else {
                                     textAnchor = 'start';
                                     textPos.x = eventLine.x2 + textOffset;
-                                    // Image is to the right of text
                                     imagePos.x = textPos.x + (textWidth > 0 ? textWidth : 0) + (event.image && event.text ? imagePadding : 0);
                                 }
-                                imagePos.y = textPos.y - 15; // Align image with text
+                                imagePos.y = textPos.y - 15;
                             }
 
-                            // --- Set final text attributes ---
                             if (textEl) {
                                 textEl.setAttribute('x', textPos.x);
                                 textEl.setAttribute('y', textPos.y);
                                 textEl.setAttribute('text-anchor', textAnchor);
-                                // Re-set x for all tspans to align them correctly
                                 textEl.querySelectorAll('tspan').forEach(tspan => {
                                     tspan.setAttribute('x', textPos.x);
                                 });
                             }
-                            
-                            // --- Get final BBoxes *after* positioning ---
+
                             const final_textBBox = textEl ? textEl.getBBox() : { x: 0, y: 0, width: 0, height: 0 };
                             let final_imgBBox = { x: imagePos.x, y: imagePos.y, width: (event.image ? 100 : 0), height: (event.image ? 50 : 0) };
 
-                            // --- Update global content bounds ---
                             minContentY = Math.min(minContentY, eventLine.y2, final_textBBox.y, final_imgBBox.y);
                             maxContentY = Math.max(maxContentY, eventLine.y2, final_textBBox.y + final_textBBox.height, final_imgBBox.y + final_imgBBox.height);
                             minContentX = Math.min(minContentX, eventLine.x2, final_textBBox.x, final_imgBBox.x);
                             maxContentX = Math.max(maxContentX, eventLine.x2, final_textBBox.x + final_textBBox.width, final_imgBBox.x + final_imgBBox.width);
 
-                            if (textEl) textEl.remove(); // Clean up measurement element
+                            if (textEl) textEl.remove();
 
-                            // Return all calculated data for drawing
                             return { event, eventColor, eventLine, textPos, textAnchor, imagePos, eventPos, isAlt };
                         });
 
-                        // --- 2. Calculate Final Dimensions & Update Firestore ---
                         let newW_px = w, newH_px = h;
                         let viewBox_x = 0, viewBox_y = 0, viewBox_w = w, viewBox_h = h;
 
                         if (data.mode === 'horizontal') {
                             const requiredHeight = (maxContentY - minContentY) + (itemPadding * 2);
-                            newH_px = Math.max(100, requiredHeight); // Min height 100
+                            newH_px = Math.max(100, requiredHeight);
                             viewBox_y = minContentY - itemPadding;
                             viewBox_h = newH_px;
-                            viewBox_w = w; // Width is fixed by item data
-                        } else { // vertical
+                            viewBox_w = w;
+                        } else {
                             const requiredWidth = (maxContentX - minContentX) + (itemPadding * 2);
-                            newW_px = Math.max(150, requiredWidth); // Min width 150
+                            newW_px = Math.max(150, requiredWidth);
                             viewBox_x = minContentX - itemPadding;
                             viewBox_w = newW_px;
-                            viewBox_h = h; // Height is fixed by item data
+                            viewBox_h = h;
                         }
                         
-                        // --- This is Request #2: Accommodate Content ---
-                        // If the calculated size is different, update the item in Firestore.
-                        // This will trigger onSnapshot and re-render with the new dimensions.
-                        // We add a check for `isResizing` to prevent update loops.
                         const needsWidthUpdate = (data.mode === 'vertical' && Math.abs(newW_px - w) > 1);
                         const needsHeightUpdate = (data.mode === 'horizontal' && Math.abs(newH_px - h) > 1);
 
                         if ((needsWidthUpdate || needsHeightUpdate) && !isResizing && !isResizingTimelineEvent) {
-                            // Ensure itemsCol is available (it should be)
                             if (typeof itemsCol !== 'undefined' && itemsCol) {
                                 try {
-                                    // We can get the ID from the itemEl
                                     const itemRef = doc(itemsCol, itemEl.id);
                                     if (needsWidthUpdate) {
                                         updateDoc(itemRef, { width: `${newW_px}px` });
@@ -5590,13 +5503,8 @@
                             }
                         }
                         
-                        // --- 3. Set Final ViewBox ---
-                        // This viewBox is centered and scaled to contain all content
                         svgEl.setAttribute('viewBox', `${viewBox_x} ${viewBox_y} ${viewBox_w} ${viewBox_h}`);
-
-                        // --- 4. Now, actually draw everything ---
                         
-                        // Draw Main Line
                         const mainLineEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                         mainLineEl.setAttribute('x1', line.x1);
                         mainLineEl.setAttribute('y1', line.y1);
@@ -5607,7 +5515,6 @@
                         mainLineEl.setAttribute('class', 'timeline-main-line');
                         svgEl.appendChild(mainLineEl);
                         
-                        // Draw Ball
                         const ballEl = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                         ballEl.setAttribute('cx', ball.cx);
                         ballEl.setAttribute('cy', ball.cy);
@@ -5616,16 +5523,13 @@
                         ballEl.setAttribute('class', 'timeline-ball');
                         svgEl.appendChild(ballEl);
                         
-                        // Draw Arrow
                         const arrowEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                         arrowEl.setAttribute('d', arrowPath);
                         arrowEl.setAttribute('fill', mainColor);
                         arrowEl.setAttribute('class', 'timeline-arrow');
                         svgEl.appendChild(arrowEl);
 
-                        // Draw Events (using the data we calculated in step 1)
                         eventsData.forEach(({ event, eventColor, eventLine, textPos, textAnchor, imagePos, eventPos, isAlt }) => {
-                            // Draw Event Line
                             const eventLineEl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
                             eventLineEl.setAttribute('x1', eventLine.x1);
                             eventLineEl.setAttribute('y1', eventLine.y1);
@@ -5636,7 +5540,6 @@
                             eventLineEl.setAttribute('class', 'timeline-event-line');
                             svgEl.appendChild(eventLineEl);
                             
-                            // Draw Event Text
                             if (event.text) {
                                 const textEl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                                 textEl.setAttribute('x', textPos.x);
@@ -5648,16 +5551,15 @@
                                 const lines = event.text.split('\n');
                                 lines.forEach((line, i) => {
                                     const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-                                    tspan.textContent = line || ' '; // Use a space for empty lines to maintain 'dy'
-                                    tspan.setAttribute('x', textPos.x); // Set x for each tspan
-                                    tspan.setAttribute('dy', (i === 0) ? '0' : '1.2em'); // Line spacing
+                                    tspan.textContent = line || ' ';
+                                    tspan.setAttribute('x', textPos.x);
+                                    tspan.setAttribute('dy', (i === 0) ? '0' : '1.2em');
                                     textEl.appendChild(tspan);
                                 });
                                 
                                 svgEl.appendChild(textEl);
                             }
 
-                            // Draw Event Image
                             if (event.image) {
                                 const imgEl = document.createElementNS('http://www.w3.org/2000/svg', 'image');
                                 imgEl.setAttribute('x', imagePos.x);
@@ -5668,7 +5570,6 @@
                                 svgEl.appendChild(imgEl);
                             }
 
-                            // Draw Move Handle
                             const moveHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                             moveHandle.setAttribute('cx', eventPos.x);
                             moveHandle.setAttribute('cy', eventPos.y);
@@ -5678,7 +5579,6 @@
                             moveHandle.dataset.isAlt = isAlt;
                             svgEl.appendChild(moveHandle);
 
-                            // Draw Resize Handle
                             const resizeHandle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
                             resizeHandle.setAttribute('cx', eventLine.x2);
                             resizeHandle.setAttribute('cy', eventLine.y2);
@@ -5752,7 +5652,6 @@
                             if (currentElement.classList.contains('item-timeline')) {
                                 const item = items.get(currentElement.id);
                                 if (item) {
-                                    // Create a temporary data object with new dimensions for rendering
                                     const tempData = { ...item.data };
                                     tempData.width = currentElement.style.width;
                                     tempData.height = currentElement.style.height;
@@ -5818,11 +5717,8 @@
                                     currentFreehandPath.setAttribute('d', currentFreehandPathString);
                                 }
                             }
-                            
-                            // --- THIS IS THE CLOSING BRACE for isDrawingFreehand ---
                         }
-                        
-                        // --- BLOCKS MOVED FROM OUTSIDE TO INSIDE onMouseMove ---
+
                         else if (isMovingTimelineEvent) {
                             if (!canEdit) return;
                             
@@ -5843,7 +5739,7 @@
                                     const positionDelta = deltaX_world / mainLineWidth;
                                     newPosition = startPosition + positionDelta;
                                 }
-                            } else { // vertical
+                            } else {
                                 const line_y1 = (itemData.direction === 't-b') ? (padding + ballRadius) : (padding + arrowSize);
                                 const line_y2 = (itemData.direction === 't-b') ? (h - padding - arrowSize) : (h - padding - ballRadius);
                                 const mainLineHeight = line_y2 - line_y1;
@@ -5854,11 +5750,9 @@
                                     newPosition = startPosition + positionDelta;
                                 }
                             }
-                            
-                            // Clamp position between 0 and 1
+
                             event.position = Math.max(0, Math.min(1, newPosition));
                             
-                            // Re-render the SVG locally
                             renderTimelineSVG(currentTimelineEventData.itemEl.querySelector('svg'), currentTimelineEventData.itemEl, itemData);
 
                         } else if (isResizingTimelineEvent) {
@@ -5870,15 +5764,13 @@
                             if (itemData.mode === 'horizontal') {
                                 const deltaY_world = worldMouse.y - startPos_world.y;
                                 newLength = isAlt ? (startLineLength - deltaY_world) : (startLineLength + deltaY_world);
-                            } else { // vertical
+                            } else {
                                 const deltaX_world = worldMouse.x - startPos_world.x;
                                 newLength = isAlt ? (startLineLength - deltaX_world) : (startLineLength + deltaX_world);
                             }
-                            
-                            // Clamp min length
+
                             event.lineLength = Math.max(10, newLength);
                             
-                            // Re-render the SVG locally
                             renderTimelineSVG(currentTimelineEventData.itemEl.querySelector('svg'), currentTimelineEventData.itemEl, itemData);
                         }
                     }
@@ -6020,33 +5912,24 @@
 
                         if (isMovingTimelineEvent || isResizingTimelineEvent) {
                             if (canEdit && currentTimelineEventData) {
-                                // Save the updated events array to Firestore
                                 try {
                                     const itemRef = doc(itemsCol, currentTimelineEventData.itemEl.id);
-                                    
-                                    // --- FIX: Set flags to false *before* the async call ---
-                                    // This prevents a race condition where the snapshot listener
-                                    // runs while the flag is still true, blocking the auto-resize.
+
                                     isMovingTimelineEvent = false;
                                     isResizingTimelineEvent = false;
-                                    
-                                    // We save the entire events array, which was modified locally
+
                                     await updateDoc(itemRef, {
                                         events: currentTimelineEventData.itemData.events
                                     });
-                                    
-                                    // --- ADICIONE ESTA LINHA ---
-                                    // Força um redesenho local final com os dados corretos e as flags já como 'false'.
+
                                     renderTimelineSVG(currentTimelineEventData.itemEl.querySelector('svg'), currentTimelineEventData.itemEl, currentTimelineEventData.itemData);
                                     
                                 } catch (e) {
                                     console.error("Error updating timeline event:", e);
-                                    // Ensure flags are reset even on error
                                     isMovingTimelineEvent = false;
                                     isResizingTimelineEvent = false;
                                 }
                             } else {
-                                // Reset flags if not editing or no data
                                 isMovingTimelineEvent = false;
                                 isResizingTimelineEvent = false;
                             }
@@ -6077,7 +5960,7 @@
 
                         if (isResizing) {
                             if (!canEdit) {
-                                isResizing = false; // Apenas reseta a flag se não puder editar
+                                isResizing = false;
                             } else {
                                 try {
                                     const newWidth = currentElement.style.width;
@@ -6085,7 +5968,6 @@
                                     
                                     const itemRef = doc(itemsCol, currentElement.id);
                                     
-                                    // --- CORREÇÃO: Mover a flag para ANTES do await ---
                                     isResizing = false; 
                                     
                                     await updateDoc(itemRef, {
@@ -6093,11 +5975,9 @@
                                         height: newHeight
                                     });
 
-                                    // Esta chamada agora vai rodar com 'isResizing = false'
                                     if (currentElement.classList.contains('item-timeline')) {
                                         const item = items.get(currentElement.id);
                                         if (item) {
-                                            // Atualiza o cache de dados local
                                             item.data.width = newWidth;
                                             item.data.height = newHeight;
                                             renderTimelineSVG(currentElement.querySelector('svg'), currentElement, item.data);
@@ -6105,7 +5985,7 @@
                                     }
                                 } catch(e) {
                                     console.error("Error updating size:", e);
-                                    isResizing = false; // Garante que a flag seja resetada em caso de erro
+                                    isResizing = false;
                                 }
                             }
                         }
@@ -6118,7 +5998,6 @@
 
                         isPanning = false;
                         isDragging = false;
-                        // isResizing = false; // <-- A LINHA ORIGINAL ESTAVA AQUI, AGORA FOI MOVIDA
                         isDrawingLine = false;
                         isSelecting = false;
                         isDrawingFreehand = false;
@@ -6439,12 +6318,11 @@
                 const userRef = doc(usersCol, userId);
                 const nicknameRef = doc(nicknamesCol, userNickname);
 
-                // Initialize user with proper data
                 await setDoc(userRef, {
                     nickname: userNickname,
                     role: currentUserRole,
                     last_seen: serverTimestamp(),
-                    kicked: false  // Explicitly set kicked to false
+                    kicked: false
                 }, { merge: true });
 
                 await setDoc(nicknameRef, {
@@ -6455,7 +6333,7 @@
                 presenceInterval = setInterval(() => {
                     setDoc(userRef, {
                         last_seen: serverTimestamp(),
-                        nickname: userNickname // Ensure nickname is always set
+                        nickname: userNickname
                     }, { merge: true });
 
                     setDoc(nicknameRef, {
@@ -6468,7 +6346,7 @@
                     if (isCleaningUp) return;
                     isCleaningUp = true;
                     
-                    // SET THE FLAG HERE
+
                     isVoluntarilyLeaving = true;
                     console.log("Cleanup triggered, setting isVoluntarilyLeaving=true");
 
@@ -6478,7 +6356,6 @@
                     try {
                         if (userRef) {
                             const userSnap = await getDoc(userRef);
-                            // Only delete if not kicked (voluntary leave)
                             if (userSnap.exists() && !userSnap.data().kicked) {
                                 await deleteDoc(userRef);
                             }
@@ -6504,17 +6381,13 @@
                     let currentCleanupFunction = () => {};
 
             leaveRoomBtn.addEventListener('click', () => {
-                leaveRoom(false); // Explicitly pass false to indicate voluntary leave
+                leaveRoom(false);
             });
 
-            // Update the leaveRoom function
             async function leaveRoom(isKicked = false) {
                 
                 if (isKicked) {
                     console.log("leaveRoom called (kicked=true)");
-                    // This is a real kick.
-                    // currentCleanupFunction is already empty, listeners detached by handleKick
-                    // We just need to detach firestore listeners and reset UI
                     
                     detachListeners();
 
@@ -6530,35 +6403,24 @@
                     drawingGroup.innerHTML = '';
                     itemConnectionsMap.clear();
 
-                    // Hide UI elements
                     document.querySelector('header').style.display = 'none';
                     document.querySelector('footer').style.display = 'none';
                     toggleSidebarBtn.style.display = 'none';
-                    document.getElementById('center-board-btn').style.display = 'none'; // ADDED
+                    document.getElementById('center-board-btn').style.display = 'none';
 
-                    // Reset board state
                     currentBoardId = null;
                     isBoardOwner = false;
                     canEdit = false;
 
-                    // --- INÍCIO DA ALTERAÇÃO ---
-                    // Ação foi movida para DEPOIS do lobby, conforme solicitado
-                    
-                    // 1. Vai para o lobby PRIMEIRO
                     showLobby();
                     
-                    // 2. Mostra o modal de kick DEPOIS, já no lobby
                     showModalAlert(kickedModalOverlay, kickedOkBtn, {
-                        // Nenhum callback necessário, já estamos no lobby
                     });
-                    // --- FIM DA ALTERAÇÃO ---
 
                 } else {
                     console.log("leaveRoom called (kicked=false)");
-                    // This is a voluntary leave
                     isVoluntarilyLeaving = true; // Set flag
 
-                    // Perform cleanup (this will delete the user doc)
                     if (currentCleanupFunction) {
                         window.removeEventListener('beforeunload', currentCleanupFunction);
                         window.removeEventListener('pagehide', currentCleanupFunction);
@@ -6568,7 +6430,6 @@
 
                     detachListeners();
 
-                    // Clear the board
                     items.forEach(item => item.el.remove());
                     items.clear();
                     connections.forEach(conn => {
@@ -6580,30 +6441,26 @@
                     drawingGroup.innerHTML = '';
                     itemConnectionsMap.clear();
 
-                    // Hide UI elements
                     document.querySelector('header').style.display = 'none';
                     document.querySelector('footer').style.display = 'none';
                     toggleSidebarBtn.style.display = 'none';
-                    document.getElementById('center-board-btn').style.display = 'none'; // ADDED
+                    document.getElementById('center-board-btn').style.display = 'none';
 
-                    // Reset board state
                     currentBoardId = null;
                     isBoardOwner = false;
                     canEdit = false;
 
-                    // Show lobby (no kicked modal)
                     showLobby();
                     
-                    // Reset flag after a delay
                     setTimeout(() => { 
                         isVoluntarilyLeaving = false; 
                         console.log("isVoluntarilyLeaving flag reset");
-                    }, 1500); // Give snapshot time to process
+                    }, 1500);
                 }
             }
 
             async function loadBoard(boardId, token = null, forceReload = false) {
-                isSwitchingRooms = true; // ATIVA A TRAVA
+                isSwitchingRooms = true;
                 console.log("loadBoard started, isSwitchingRooms=true");
 
                 if (!boardId || boardId.trim() === "") {
@@ -6623,7 +6480,6 @@
                 const boardPasswordError = document.getElementById('board-password-error');
                 const boardPasswordInputEl = document.getElementById('board-password-input');
 
-                // Check if user is kicked from this board
                 if (userId) {
                     const usersColForCheck = collection(db, 'artifacts', appId, 'public', 'data', 'boards', sanitizedBoardId, 'users');
                     const userRefForCheck = doc(usersColForCheck, userId);
@@ -6632,7 +6488,6 @@
                     if (userSnap.exists() && userSnap.data().kicked === true) {
                         console.log("Kicked user attempting to rejoin. Access denied.");
 
-                        // Show access denied message
                         await showModalAlert(errorModalOverlay, errorModalOkBtn, {
                             title: "Access Denied",
                             titleEl: errorModalTitle,
@@ -6640,7 +6495,6 @@
                             textEl: errorModalText
                         });
 
-                        // Kicked user, always return to lobby
                         showLobby();
                         return;
                     }
@@ -6704,14 +6558,6 @@
                                             boardPasswordInputEl.classList.add('border-slate-600', 'focus:ring-indigo-500');
                                         } else {
 
-                                            /*
-                                            await showModalAlert(
-                                                errorModalOverlay,
-                                                errorModalOkBtn,
-                                                {
-                                                }
-                                            );
-                                            */
                                             boardPasswordError.textContent = 'Wrong password';
                                             boardPasswordError.style.display = 'block';
                                             boardPasswordInputEl.classList.remove('border-slate-600', 'focus:ring-indigo-500');
@@ -6801,16 +6647,12 @@
 
                             boardNameDisplay.textContent = `Board: ${currentBoardId}`;
                             boardNameInput.value = "";
-
-                            // CORREÇÃO: Inverter a ordem. 
-                            // Primeiro cria o usuário, depois anexa os listeners.
                             
-                            // 1. Criar o documento do usuário primeiro.
                             currentCleanupFunction = await setupPresence(); 
-                            // 2. Agora anexar os listeners (que agora verão que o usuário existe).
+
                             setupFirestoreListeners(currentBoardId);
 
-                            isSwitchingRooms = false; // DESATIVA A TRAVA
+                            isSwitchingRooms = false;
                             console.log("isSwitchingRooms flag reset");
 
                             document.querySelector('header').style.display = 'flex';
@@ -6953,7 +6795,6 @@
                                     console.error("Error updating 'owner' nickname in boards collection:", e);
                                 }
 
-                                // Salvar o novo nickname no localStorage
                                 localStorage.setItem(NICKNAME_STORAGE_KEY, userNickname);
                             }
                         }
@@ -7037,7 +6878,6 @@
                                 snapshot.docs.forEach(doc => {
                                     const data = doc.data()
                                     if (doc.id !== 'default-board' && data.hidden !== true) {
-                                        // CORREÇÃO: Usar 'data.hasPassword' em vez de chamar doc.data() novamente
                                         allBoards.push({ id: doc.id, hasPassword: data.hasPassword || false });
                                     }
                                 });
@@ -7115,9 +6955,6 @@
                             return;
                         }
 
-                        // const existingRoom = allBoards.find(b => b.id.toLowerCase() === sanitizedRoomId.toLowerCase()); // <- BUGGY LINE REMOVED
-
-                        // INÍCIO DA CORREÇÃO: Verificar diretamente no DB se a sala existe
                         let existingRoomSnap = null;
                         try {
                             const boardMetaRef = doc(db, 'artifacts', appId, 'public', 'data', 'boards', sanitizedRoomId);
@@ -7132,18 +6969,14 @@
                             });
                             return;
                         }
-                        // FIM DA CORREÇÃO
 
-                        // if (existingRoom) { // <- CHECK ANTIGO
-                        if (existingRoomSnap.exists()) { // <- CHECK CORRIGIDO
-                            // A sala existe, mostrar o aviso para "entrar"
-                            const existingRoomData = existingRoomSnap.data(); // Obter dados da sala
-                            pendingRoomName = existingRoomSnap.id; // Usar o ID do snapshot
-                            pendingHasPassword = existingRoomData.hasPassword; // Usar os dados do snapshot
+                        if (existingRoomSnap.exists()) {
+                            const existingRoomData = existingRoomSnap.data();
+                            pendingRoomName = existingRoomSnap.id;
+                            pendingHasPassword = existingRoomData.hasPassword;
                             roomExistsText.innerHTML = `The room <strong class="text-white">${existingRoomSnap.id}</strong> already exists. Would you like to join it?`;
                             roomExistsModalOverlay.style.display = 'flex';
                         } else {
-                            // A sala NÃO existe. Mostrar o modal para "criar nova".
                             const newPassword = await showModalPrompt(
                                 newBoardPasswordModalOverlay,
                                 newBoardPasswordInput,
@@ -7157,19 +6990,17 @@
 
                             if (newPassword === null) {
                                 document.getElementById('new-board-hidden-checkbox').checked = false; // Reset on cancel
-                                return; // User cancelled
+                                return;
                             }
 
-                            // User confirmed. Read checkbox *now* from the correct modal
                             const isHidden = document.getElementById('new-board-hidden-checkbox').checked;
 
-                            // User confirmed. Create the doc.
                             const boardMetaRef = doc(db, 'artifacts', appId, 'public', 'data', 'boards', sanitizedRoomId);
                             let boardData = {
                                 hasPassword: false,
                                 owner: userNickname,
                                 ownerId: userId,
-                                hidden: isHidden // Set the hidden flag here
+                                hidden: isHidden
                             };
 
                             if (newPassword && newPassword.trim() !== "") {
@@ -7179,9 +7010,7 @@
 
                             try {
                                 await setDoc(boardMetaRef, boardData);
-                                // Reset checkbox in the correct modal
                                 document.getElementById('new-board-hidden-checkbox').checked = false;
-                                // Now that it's created, load it.
                                 loadBoard(sanitizedRoomId);
                             } catch (e) {
                                 console.error("Error creating new board:", e);
@@ -7303,7 +7132,6 @@
                     }
                     
                     function renderSidebarList() {
-                        // ADDED: Search logic
                         const searchTerm = sidebarSearchInput.value.toLowerCase().trim();
                         const searchWords = searchTerm.split(/\s+/).filter(word => word.length > 0); // Divide em palavras
 
@@ -7311,14 +7139,11 @@
                         let itemCount = 0;
 
                         sidebarItemCache.forEach((data, id) => {
-                            // ADDED: Filtering logic
                             let isMatch = false;
 
                             if (searchWords.length === 0) {
-                                // Sem termo de busca, mostra todos
                                 isMatch = true;
                             } else {
-                                // Pega o conteúdo de texto para pesquisar
                                 let contentToSearch = '';
                                 if (data.type === 'note') {
                                     contentToSearch = (data.content || '').toLowerCase();
@@ -7328,14 +7153,13 @@
                                                     : '';
                                 }
 
-                                // Verifica se TODAS as palavras da busca estão presentes no conteúdo
                                 if (contentToSearch) {
                                     isMatch = searchWords.every(word => contentToSearch.includes(word));
                                 }
                             }
 
                             if (!isMatch) {
-                                return; // Skip this item if it doesn't match
+                                return;
                             }
                             
                             itemCount++;
@@ -7358,13 +7182,11 @@
                                               ? data.content.substring(0, 15) + '...' 
                                               : (data.content || 'Nota vazia');
                             } else if (data.type === 'image') {
-                                // Pré-visualização da imagem
                                 previewHTML = `
                                     <div class="preview">
                                         <img src=${data.content} alt="Preview" class="preview-img">
                                     </div>
                                 `;
-                                // Usa o 'caption' se existir, ou um placeholder
                                 contentText = (data.caption && data.caption !== 'Click to add caption...') 
                                               ? data.caption 
                                               : 'Imagem';
@@ -7379,10 +7201,8 @@
                             `;
                             sidebarItemList.appendChild(li);
                         });
-                    
-                        // Se não houver itens, mostra o placeholder
+
                         if (itemCount === 0) {
-                            // UPDATED: Show different message based on search
                             if (searchTerm !== '') {
                                 sidebarItemList.innerHTML = `<p class="text-slate-400 text-sm text-center p-4">No items match your search.</p>`;
                             } else {
@@ -7391,7 +7211,7 @@
                         }
                     }
                     
-                    // Adiciona os event listeners para a sidebar
+
                     toggleSidebarBtn.addEventListener('click', toggleSidebar);
                     closeSidebarBtn.addEventListener('click', toggleSidebar);
                     sidebarSearchInput.addEventListener('input', renderSidebarList); // ADDED
@@ -7400,12 +7220,9 @@
                         const itemEl = e.target.closest('.sidebar-item');
                         if (itemEl && itemEl.dataset.itemId) {
                             panToItem(itemEl.dataset.itemId);
-                            // Opcional: fechar a sidebar ao clicar
-                            // toggleSidebar(); 
                         }
                     });
 
-                    // ADDED: Center button listener
                     centerBoardBtn.addEventListener('click', () => {
                         scale = 1;
                         translateX = 0;
@@ -7431,7 +7248,6 @@
                             let promptText = "Please, choose your nickname.";
 
                             if (userNickname) {
-                                // 1. Try to validate the saved nickname
                                 try {
                                     const nicknameRef = doc(nicknamesCol, userNickname);
                                     const nicknameSnap = await getDoc(nicknameRef);
@@ -7573,7 +7389,6 @@
                             }
                         }
                     });
-                    // Store directions for each mode
                     const timelineDirections = {
                         horizontal: [
                             { value: 'l-r', text: 'Left-to-Right' },
@@ -7584,8 +7399,7 @@
                             { value: 'b-t', text: 'Bottom-to-Top' }
                         ]
                     };
-                    
-                    // Update direction options when mode changes
+
                     timelineConfigModeSelect.addEventListener('change', (e) => {
                         const mode = e.target.value;
                         const directions = timelineDirections[mode];
@@ -7599,7 +7413,6 @@
                         });
                     });
 
-                    // Open and populate the modal
                     function openTimelineConfigModal(itemEl) {
                         const itemData = items.get(itemEl.id)?.data;
                         if (!itemData) return;
@@ -7779,7 +7592,6 @@
                     Configure Timeline
                 </h2>
                 
-                <!-- Main Settings -->
                 <div class="grid grid-cols-3 gap-4 mb-4">
                     <div>
                         <label for="timeline-config-color" class="block text-sm font-medium text-slate-300 mb-2">Main Color</label>
@@ -7799,22 +7611,18 @@
                     <div>
                         <label for="timeline-config-direction" class="block text-sm font-medium text-slate-300 mb-2">Direction</label>
                         <select id="timeline-config-direction" class="w-full bg-slate-700 text-white text-sm rounded-md p-2 border border-slate-600">
-                            <!-- Options will be populated by JS -->
                         </select>
                     </div>
                 </div>
                 
-                <!-- Events List -->
                 <h3 class="text-lg font-semibold text-white mb-2">Events</h3>
                 <div id="timeline-config-events-list" class="flex-grow overflow-y-auto bg-slate-800/50 rounded-lg p-3 space-y-3 mb-4">
-                    <!-- Events will be populated by JS -->
                 </div>
 
                 <button id="timeline-config-add-event" class="header-btn bg-green-600 hover:bg-green-500 w-full mb-4">
                     + Add New Event
                 </button>
 
-                <!-- Footer Buttons -->
                 <div class="flex justify-end gap-4 flex-shrink-0">
                     <button id="timeline-config-cancel-btn" class="header-btn">
                         Cancel
