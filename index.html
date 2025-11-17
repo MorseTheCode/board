@@ -1534,14 +1534,58 @@
             class="fixed top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm z-[30000] flex items-center justify-center"
             style="display: none"
         >
-            <div class="glass-panel p-6 rounded-lg shadow-xl max-w-sm w-full">
+        <div class="glass-panel p-6 rounded-lg shadow-xl max-w-sm w-full">
                 <h2
                     id="nickname-modal-title"
                     class="text-xl font-bold text-white mb-4"
                 >
                     Welcome!
                 </h2>
-                <p class="text-slate-300 mb-6">Please, choose your nickname.</p>
+                <p class="text-slate-300 mb-6">
+                    Sign in with Google or continue as a guest.
+                </p>
+
+                <button
+                    id="google-signin-btn"
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-3 transition-colors duration-200"
+                >
+                    <svg
+                        class="w-5 h-5"
+                        viewBox="0 0 48 48"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            fill="#EA4335"
+                            d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+                        ></path>
+                        <path
+                            fill="#4285F4"
+                            d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.84 7.18l7.98 6.19C45.02 40.3 48 33.37 48 24.55z"
+                        ></path>
+                        <path
+                            fill="#34A853"
+                            d="M10.53 29.59c-.49-1.47-.78-3.04-.78-4.64s.29-3.17.78-4.64l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+                        ></path>
+                        <path
+                            fill="#FBBC05"
+                            d="M24 48c6.47 0 11.9-2.13 15.89-5.61l-7.98-6.19c-2.11 1.43-4.82 2.3-7.91 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+                        ></path>
+                        <path fill="none" d="M0 0h48v48H0z"></path>
+                    </svg>
+                    Sign in with Google
+                </button>
+
+                <div
+                    class="my-4 flex items-center before:flex-1 before:border-t before:border-slate-600 before:mt-0.5 after:flex-1 after:border-t after:border-slate-600 after:mt-0.5"
+                >
+                    <p class="text-center font-semibold mx-4 text-slate-400">
+                        OR
+                    </p>
+                </div>
+
+                <p class="text-slate-300 mb-4">
+                    Continue as a guest with a nickname:
+                </p>
                 <input
                     type="text"
                     id="nickname-input"
@@ -2036,6 +2080,14 @@
                     class="max-h-60 overflow-y-auto text-white bg-slate-800/50 rounded-lg p-2 mb-6"
                 ></ul>
 
+                <button
+                    id="logout-guest-btn"
+                    class="header-btn danger w-full mb-6"
+                    style="display: none;"
+                >
+                    Logout from Guest Nickname
+                </button>
+
                 <div class="h-px bg-slate-700 my-6"></div>
 
                 <h3 class="text-lg font-semibold text-slate-200 mb-2">
@@ -2091,7 +2143,9 @@
                         getAuth,
                         signInAnonymously,
                         signInWithCustomToken,
-                        onAuthStateChanged
+                        onAuthStateChanged,
+                        GoogleAuthProvider,
+                        signInWithPopup
                     } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
                     import {
                         getFirestore,
@@ -2217,6 +2271,9 @@
                     const nicknameInput = document.getElementById('nickname-input');
                     const saveNicknameBtn = document.getElementById('save-nickname-btn');
                     const cancelNicknameBtn = document.getElementById('cancel-nickname-btn');
+                    const googleSignInBtn = document.getElementById(
+                        "google-signin-btn"
+                    );
 
                     const boardPasswordModalOverlay = document.getElementById('board-password-modal-overlay');
                     const boardPasswordName = document.getElementById('board-password-name');
@@ -2301,6 +2358,8 @@
 
                     const leaveRoomBtn = document.getElementById('leave-room-btn');
                     
+                    const logoutGuestBtn = document.getElementById('logout-guest-btn');
+
                     const sidebarMenu = document.getElementById('sidebar-menu');
                     const sidebarItemList = document.getElementById('sidebar-item-list');
                     const toggleSidebarBtn = document.getElementById('toggle-sidebar-button');
@@ -6886,6 +6945,12 @@
                         toggleSidebarBtn.style.display = 'none';
                         document.getElementById('center-board-btn').style.display = 'none';
                         
+                        if (auth.currentUser && auth.currentUser.isAnonymous) {
+                            logoutGuestBtn.style.display = 'block';
+                        } else {
+                            logoutGuestBtn.style.display = 'none';
+                        }
+
                         lobbyModalOverlay.style.display = 'flex';
                         lobbyRoomList.innerHTML = `<li>Loading rooms...</li>`;
 
@@ -7253,165 +7318,170 @@
                         updateTransform();
                     });
 
+                    googleSignInBtn.addEventListener("click", async () => {
+                        const provider = new GoogleAuthProvider();
+                        try {
+                            await signInWithPopup(auth, provider);
+                        } catch (error) {
+                            console.error("Google Sign-In Error:", error);
+                            if (
+                                error.code ===
+                                "auth/account-exists-with-different-credential"
+                            ) {
+                                showModalAlert(
+                                    errorModalOverlay,
+                                    errorModalOkBtn,
+                                    {
+                                        title: "Login Error",
+                                        titleEl: errorModalTitle,
+                                        text: "An account already exists with the same email address but different sign-in credentials. Try signing in using the original method.",
+                                        textEl: errorModalText,
+                                    }
+                                );
+                            } else {
+                                showModalAlert(
+                                    errorModalOverlay,
+                                    errorModalOkBtn,
+                                    {
+                                        title: "Login Error",
+                                        titleEl: errorModalTitle,
+                                        text: `An error occurred during Google sign-in: ${error.message}`,
+                                        textEl: errorModalText,
+                                    }
+                                );
+                            }
+                        }
+                    });
+
+                    saveNicknameBtn.addEventListener("click", async () => {
+                        const nickname = nicknameInput.value.trim();
+                        if (nickname) {
+                            localStorage.setItem(NICKNAME_STORAGE_KEY, nickname);
+                            try {
+                                await signInAnonymously(auth);
+                            } catch (e) {
+                                console.error("Anonymous sign-in error:", e);
+                            }
+                        } else {
+                            nicknameInput.focus();
+                        }
+                    });
+
+                    logoutGuestBtn.addEventListener('click', async () => {
+                        try {
+                            await auth.signOut();
+                            // onAuthStateChanged will handle the rest (show login modal)
+                        } catch (e) {
+                            console.error("Error signing out:", e);
+                        }
+                    });
+
                     onAuthStateChanged(auth, async (user) => {
                         if (user) {
+                            nicknameModalOverlay.style.display = "none";
                             userId = user.uid;
-                            console.log("User authenticated:", userId);
+                            console.log(
+                                "User authenticated:",
+                                userId,
+                                "Anonymous:",
+                                user.isAnonymous
+                            );
 
-                            const urlParams = new URLSearchParams(window.location.search);
-                            const urlBoardId = urlParams.get('board') || null;
-                            const urlInviteToken = urlParams.get('invite') || null;
+                            let savedNickname =
+                                localStorage.getItem(NICKNAME_STORAGE_KEY);
+                            let finalNickname = null;
 
-                            let savedNickname = localStorage.getItem(NICKNAME_STORAGE_KEY);
-                            userNickname = savedNickname;
-                            let nicknameValid = false;
-                            let attempts = 0;
-                            const maxAttempts = 5;
-                            let promptTitle = "Welcome!";
-                            let promptText = "Please, choose your nickname.";
-
-                            if (userNickname) {
-                                try {
-                                    const nicknameRef = doc(nicknamesCol, userNickname);
-                                    const nicknameSnap = await getDoc(nicknameRef);
-
-                                    if (nicknameSnap.exists()) {
-                                        const nicknameData = nicknameSnap.data();
-
-                                        if (nicknameData.password) {
-                                            const passwordValid = await validateNicknamePassword(userNickname, nicknameSnap);
-                                            if (!passwordValid) {
-                                                userNickname = null;
-                                                promptTitle = "Password Required";
-                                                promptText = `The nickname "${savedNickname}" requires a password. Please enter it, or choose a new nickname.`;
-                                                savedNickname = null;
-                                            }
-                                        }
-
-                                        if (userNickname && nicknameData.currentUserId && nicknameData.currentUserId !== userId) {
-                                            const lastSeen = nicknameData.last_seen?.toDate ? nicknameData.last_seen.toDate() : null;
-                                            const oneMinuteAgo = new Date(Date.now() - 60000);
-
-                                            if (lastSeen && lastSeen > oneMinuteAgo) {
-                                                userNickname = null;
-                                                promptTitle = "Nickname In Use";
-                                                promptText = `The nickname "${savedNickname}" is already in use. Please choose a different one.`;
-                                                savedNickname = null;
-                                            }
-                                        }
-
-                                        if (userNickname) {
-                                            await setDoc(nicknameRef, { currentUserId: userId, last_seen: serverTimestamp() }, { merge: true });
-                                            nicknameValid = true;
-                                        }
-
-                                    } else {
-                                        await setDoc(nicknameRef, { currentUserId: userId, last_seen: serverTimestamp() });
-                                        nicknameValid = true;
-                                    }
-                                } catch (e) {
-                                    console.error("Error validating saved nickname:", e);
-                                    userNickname = null;
-                                    promptTitle = "Error";
-                                    promptText = "An error occurred while validating your nickname. Please choose one.";
-                                    savedNickname = null;
+                            if (!user.isAnonymous) {
+                                if (user.displayName) {
+                                    finalNickname = user.displayName;
+                                } else if (savedNickname) {
+                                    finalNickname = savedNickname;
+                                } else {
+                                    finalNickname = `User_${userId.substring(
+                                        0,
+                                        4
+                                    )}`;
+                                }
+                            } else {
+                                if (savedNickname) {
+                                    finalNickname = savedNickname;
                                 }
                             }
 
-                            if (!nicknameValid) {
-                                const defaultPromptNick = savedNickname || `User_${userId.substring(0, 4)}`;
-                                userNickname = null;
-
-                                while (!nicknameValid) {
-                                    userNickname = await showModalPrompt(
-                                        nicknameModalOverlay,
-                                        nicknameInput,
-                                        saveNicknameBtn,
-                                        cancelNicknameBtn,
-                                        {
-                                            title: attempts === 0 ? promptTitle : (userNickname ? "Nickname In Use" : "Welcome!"),
-                                            titleEl: nicknameModalTitle,
-                                            text: attempts === 0
-                                                ? promptText
-                                                : `The nickname "${userNickname}" is already in use or requires a password. Please choose a different one.`,
-                                            textEl: nicknameModalOverlay.querySelector('p'),
-                                            defaultValue: attempts === 0 ? defaultPromptNick : '',
-                                            placeholder: "Type your nickname...",
-                                            closeOnOverlayClick: false
-                                        }
-                                    );
-
-                                    if (!userNickname || userNickname.trim() === "") {
-                                        userNickname = defaultPromptNick;
-                                    } else {
-                                        userNickname = userNickname.trim();
+                            if (finalNickname) {
+                                userNickname = finalNickname;
+                                localStorage.setItem(
+                                    NICKNAME_STORAGE_KEY,
+                                    userNickname
+                                );
+                            } else {
+                                let newNickname = await showModalPrompt(
+                                    nicknameModalOverlay,
+                                    nicknameInput,
+                                    saveNicknameBtn,
+                                    cancelNicknameBtn,
+                                    {
+                                        title: "Choose Nickname",
+                                        titleEl: nicknameModalTitle,
+                                        text: "Please choose a nickname to continue.",
+                                        textEl: nicknameModalOverlay.querySelector(
+                                            "p"
+                                        ),
+                                        defaultValue: user.isAnonymous
+                                            ? ""
+                                            : user.email ||
+                                              `User_${userId.substring(0, 4)}`,
+                                        placeholder: "Type your nickname...",
+                                        closeOnOverlayClick: false,
                                     }
+                                );
 
-                                    const nicknameRef = doc(nicknamesCol, userNickname);
-                                    const nicknameSnap = await getDoc(nicknameRef);
-
-                                    if (nicknameSnap.exists()) {
-                                        const nicknameData = nicknameSnap.data();
-
-                                        if (nicknameData.password) {
-                                            const passwordValid = await validateNicknamePassword(userNickname, nicknameSnap);
-                                            if (!passwordValid) {
-                                                attempts++;
-                                                continue;
-                                            }
-                                        }
-
-                                        if (nicknameData.currentUserId && nicknameData.currentUserId !== userId) {
-                                            const lastSeen = nicknameData.last_seen?.toDate ? nicknameData.last_seen.toDate() : null;
-                                            const oneMinuteAgo = new Date(Date.now() - 60000);
-
-                                            if (lastSeen && lastSeen > oneMinuteAgo) {
-                                                nicknameValid = false;
-                                            } else {
-                                                await setDoc(nicknameRef, { currentUserId: userId, last_seen: serverTimestamp() }, { merge: true });
-                                                nicknameValid = true;
-                                            }
-                                        } else {
-                                            await setDoc(nicknameRef, { currentUserId: userId, last_seen: serverTimestamp() }, { merge: true });
-                                            nicknameValid = true;
-                                        }
-                                    } else {
-                                        await setDoc(nicknameRef, { currentUserId: userId, last_seen: serverTimestamp() });
-                                        nicknameValid = true;
-                                    }
-
-                                    if (!nicknameValid) {
-                                        attempts++;
-                                        if (attempts >= maxAttempts) {
-                                            userNickname = `${userNickname || 'User'}_${Math.floor(Math.random() * 1000)}`;
-                                            const newNicknameRef = doc(nicknamesCol, userNickname);
-                                            await setDoc(newNicknameRef, { currentUserId: userId, last_seen: serverTimestamp() });
-                                            nicknameValid = true;
-                                        }
-                                    }
+                                if (
+                                    !newNickname ||
+                                    newNickname.trim() === ""
+                                ) {
+                                    newNickname = `User_${userId.substring(
+                                        0,
+                                        4
+                                    )}`;
                                 }
-                            } 
-                            localStorage.setItem(NICKNAME_STORAGE_KEY, userNickname);
+                                userNickname = newNickname.trim();
+                                localStorage.setItem(
+                                    NICKNAME_STORAGE_KEY,
+                                    userNickname
+                                );
+                            }
 
                             await updateBoardOwnership(userNickname, userId);
 
+                            const urlParams = new URLSearchParams(
+                                window.location.search
+                            );
+                            const urlBoardId = urlParams.get('board') || null;
+                            const urlInviteToken = urlParams.get('invite') || null;
 
                             if (urlBoardId && urlBoardId !== "default-board") {
                                 loadBoard(urlBoardId, urlInviteToken);
                             } else {
                                 showLobby();
                             }
-
                         } else {
-                            console.log("No user signed in, attempting auth...");
-                            try {
-                                await signInAnonymously(auth);
-                            } catch (e) {
-                                console.error("Authentication failed:", e);
-                                board.innerHTML = `<div class="text-red-500 p-4">Authentication Error. Cannot load board.</div>`;
-                            }
+                            console.log("No user signed in.");
+                            // Detach any existing listeners from the previous session
+                            detachListeners();
+
+                            // Hide board UI
+                            document.querySelector('header').style.display = 'none';
+                            document.querySelector('footer').style.display = 'none';
+                            toggleSidebarBtn.style.display = 'none';
+                            document.getElementById('center-board-btn').style.display = 'none';
+                            lobbyModalOverlay.style.display = 'none'; // Hide lobby just in case
+
+                            // Show the login modal
+                            nicknameModalOverlay.style.display = "flex";
                         }
                     });
+
                     const timelineDirections = {
                         horizontal: [
                             { value: 'l-r', text: 'Left-to-Right' },
