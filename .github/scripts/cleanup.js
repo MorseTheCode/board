@@ -1,6 +1,6 @@
 const admin = require('firebase-admin');
 
-async function cleanupStaleNicknames() {
+async function cleanupStaleUsers() {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
@@ -18,40 +18,40 @@ async function cleanupStaleNicknames() {
 
     const appId = 'evidence-board';
 
-    const nicknamesCol = db.collection('artifacts').doc(appId)
+    const usersCol = db.collection('artifacts').doc(appId)
                            .collection('public').doc('data')
-                           .collection('nicknamePasswords');
+                           .collection('userPasswords');
 
-    const staleNicknamesQuery = nicknamesCol
+    const staleUsersQuery = usersCol
       .where('currentUserId', '!=', null)
       .where('last_seen', '<', threshold);
 
-    const snapshot = await staleNicknamesQuery.get();
+    const snapshot = await staleUsersQuery.get();
 
     if (snapshot.empty) {
-      console.log('No stale nicknames found. Exiting.');
+      console.log('No stale users found. Exiting.');
       return;
     }
 
-    console.log(`Found ${snapshot.size} stale nickname(s) to process...`);
+    console.log(`Found ${snapshot.size} stale user(s) to process...`);
 
-    for (const staleNicknameDoc of snapshot.docs) {
-      const nickname = staleNicknameDoc.id;
-      const currentUserId = staleNicknameDoc.data().currentUserId;
-      console.log(`- Processing stale nickname: ${nickname} (user: ${currentUserId})`);
+    for (const staleUserDoc of snapshot.docs) {
+      const user = staleUserDoc.id;
+      const currentUserId = staleUserDoc.data().currentUserId;
+      console.log(`- Processing stale user: ${user} (user: ${currentUserId})`);
 
       try {
-        await staleNicknameDoc.ref.update({
+        await staleUserDoc.ref.update({
           currentUserId: admin.firestore.FieldValue.delete()
         });
-        console.log(`  - Successfully released nickname: ${nickname}`);
+        console.log(`  - Successfully released user: ${user}`);
 
       } catch (err) {
-        console.error(`  - Error processing nickname ${nickname}:`, err.message);
+        console.error(`  - Error processing user ${user}:`, err.message);
       }
     }
 
-    console.log('All stale nicknames processed.');
+    console.log('All stale users processed.');
 
   } catch (error) {
     console.error('Error during cleanup script execution:', error);
@@ -59,7 +59,7 @@ async function cleanupStaleNicknames() {
   }
 }
 
-cleanupStaleNicknames().then(() => {
+cleanupStaleUsers().then(() => {
     console.log('Script finished.');
     if (admin.apps.length) {
         admin.app().delete();
