@@ -13,45 +13,51 @@ async function cleanupStaleUsers() {
     const db = admin.firestore();
     console.log('Firebase Admin initialized successfully.');
 
-    const STALE_THRESHOLD_MINUTES = 1;
-    const threshold = new Date(Date.now() - STALE_THRESHOLD_MINUTES * 60 * 1000);
+    const STALE_THRESHOLD_HOURS = 24;
+    const threshold = new Date(Date.now() - STALE_THRESHOLD_HOURS * 60 * 60 * 1000);
 
     const appId = 'evidence-board';
 
     const usersCol = db.collection('artifacts').doc(appId)
                            .collection('public').doc('data')
-                           .collection('userPasswords');
+                           .collection('users');
 
     const staleUsersQuery = usersCol
-      .where('currentUserId', '!=', null)
+      .where('isAnon', '==', true)
       .where('last_seen', '<', threshold);
 
     const snapshot = await staleUsersQuery.get();
 
     if (snapshot.empty) {
-      console.log('No stale users found. Exiting.');
+      console.log('No stale anonymous users found. Exiting.');
       return;
     }
 
-    console.log(`Found ${snapshot.size} stale user(s) to process...`);
+    console.log(`Found ${snapshot.size} stale anonymous user(s) to delete...`);
+
+    const batch = db.batch();
+    let deletedCount = 0;
 
     for (const staleUserDoc of snapshot.docs) {
-      const user = staleUserDoc.id;
-      const currentUserId = staleUserDoc.data().currentUserId;
-      console.log(`- Processing stale user: ${user} (user: ${currentUserId})`);
+      const userId = staleUserDoc.id;
+      const nickname = staleUserDoc.data().nickname || '(no nickname)';
+      console.log(`- Queuing deletion for stale user: ${userId} (Nickname: ${nickname})`);
+      batch.delete(staleUserDoc.ref);
+      deletedCount++;
 
-      try {
-        await staleUserDoc.ref.update({
-          currentUserId: admin.firestore.FieldValue.delete()
-        });
-        console.log(`  - Successfully released user: ${user}`);
-
-      } catch (err) {
-        console.error(`  - Error processing user ${user}:`, err.message);
+      if (deletedCount % 499 === 0) {
+        console.log('Committing partial batch...');
+        await batch.commit();
+        batch = db.batch();
       }
     }
 
-    console.log('All stale users processed.');
+    if (deletedCount % 499 !== 0) {
+        console.log('Committing final batch...');
+        await batch.commit();
+    }
+
+    console.log(`All stale anonymous users processed (${deletedCount} deleted).`);
 
   } catch (error) {
     console.error('Error during cleanup script execution:', error);
@@ -62,8 +68,11 @@ async function cleanupStaleUsers() {
 cleanupStaleUsers().then(() => {
     console.log('Script finished.');
     if (admin.apps.length) {
-        admin.app().delete();
+        admin.app().delete().then(() => {
+            console.log('Firebase Admin app deleted.');
+        });
     }
-}).catch(() => {
+}).catch((err) => {
+    console.error('Script failed:', err);
     process.exit(1);
 });
