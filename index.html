@@ -6429,7 +6429,6 @@
                     if (isCleaningUp) return;
                     isCleaningUp = true;
                     
-
                     isVoluntarilyLeaving = true;
                     console.log("Cleanup triggered, setting isVoluntarilyLeaving=true");
 
@@ -6437,12 +6436,13 @@
                     presenceInterval = null;
 
                     try {
-                        if (userRef) {
-                            const userSnap = await getDoc(userRef);
-                            if (userSnap.exists() && !userSnap.data().kicked) {
-                                await deleteDoc(userRef);
-                            }
-                        }
+                        // We no longer delete the user doc, just let last_seen go stale
+                        // if (userRef) {
+                        //     const userSnap = await getDoc(userRef);
+                        //     if (userSnap.exists() && !userSnap.data().kicked) {
+                        //         await deleteDoc(userRef);
+                        //     }
+                        // }
 
                         if (nicknameRef) {
                             await setDoc(nicknameRef, {
