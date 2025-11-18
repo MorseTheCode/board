@@ -3023,18 +3023,38 @@
 
                             const newConnectedUsers = [];
                             userListCache.clear();
+                            let amIKicked = false;
+                            let amIRemoved = true;
 
                             snapshot.docs.forEach(doc => {
                                 const data = doc.data();
                                 const id = doc.id;
-
                                 userListCache.set(id, data);
+
+                                if (id === userId) {
+                                    amIRemoved = false;
+                                    if (data.kicked === true) {
+                                        amIKicked = true;
+                                    }
+                                }
 
                                 newConnectedUsers.push({
                                     id: id,
                                     ...data
                                 });
                             });
+
+                            if (!isVoluntarilyLeaving && !isSwitchingRooms) {
+                                if (amIKicked) {
+                                    console.log("Status de kick detectado no snapshot de usersCol.");
+                                    handleKick();
+                                    return;
+                                } else if (amIRemoved && !snapshot.empty) {
+                                    console.log("Remoção do documento do usuário detectada no snapshot de usersCol.");
+                                    handleKick();
+                                    return;
+                                }
+                            }
 
                             const myData = userListCache.get(userId);
                             if (myData) {
@@ -3049,19 +3069,6 @@
                                 }
                             }
                             updateUsersModal(newConnectedUsers);
-                        });
-
-                        unsubscribeUserDoc = onSnapshot(doc(usersCol, userId), async (doc) => {
-                            if (isVoluntarilyLeaving) {
-                                console.log("User doc change (delete/kick) ignored due to voluntary leave.");
-                                return;
-                            }
-                            
-                            if (!doc.exists()) {
-                                await handleKick();
-                            } else if (doc.data().kicked === true) {
-                                await handleKick();
-                            }
                         });
 
                         unsubscribeBackups = onSnapshot(backupsCol, (snapshot) => {
@@ -3943,13 +3950,6 @@
                         if (canEdit) {
                             const newZIndex = ++zIndexCounter;
                             element.style.zIndex = newZIndex;
-
-                            try {
-                                const itemRef = doc(itemsCol, element.id);
-                                await updateDoc(itemRef, { zIndex: newZIndex });
-                            } catch (e) {
-                                console.error("Error updating z-index:", e);
-                            }
                         }
 
                         updateSelectionVisuals();
@@ -6409,6 +6409,7 @@
 
             async function setupPresence() {
                 if (presenceInterval) clearInterval(presenceInterval);
+                presenceInterval = null; 
 
                 const userRef = doc(usersCol, userId);
                 const globalUserRef = doc(nicknamesCol, userId);
@@ -6432,11 +6433,7 @@
                         last_seen: serverTimestamp(),
                         nickname: userNickname
                     }, { merge: true });
-
-                    setDoc(globalUserRef, {
-                        last_seen: serverTimestamp()
-                    }, { merge: true });
-                }, 15000);
+                }, 45000);
 
                 let isCleaningUp = false;
                 const cleanup = async () => {
@@ -6450,7 +6447,6 @@
                     presenceInterval = null;
 
                     console.log("Cleanup: Stopped presence interval. User will go offline.");
-
                 };
 
                 window.addEventListener('beforeunload', cleanup);
