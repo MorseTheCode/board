@@ -823,45 +823,49 @@
             #lobby-room-list li {
                 padding: 0;
                 margin: 0;
-                margin-bottom: 0.5rem;
+                margin-bottom: 0;
             }
             #lobby-room-list li .lobby-room-item {
                 display: flex;
                 align-items: center;
                 justify-content: space-between;
                 gap: 12px;
-                padding: 16px; /* Aumentei o padding (p-4) */
+                padding: 8px;
                 border-radius: 8px;
                 cursor: pointer;
-                
-                /* Novo gradiente e borda */
-                background-image: linear-gradient(to bottom, #334155, #1e293b); /* de slate-700 para slate-800 */
-                border: 1px solid #475569; /* border-slate-600 */
-                
-                /* Sombra sutil para dar profundidade */
+                margin-bottom: 0.5rem;
+                margin-top: 0.5rem;
+
+                background-color: #334155;
+                border: 1px solid #475569;
+
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-                
-                /* Transição suave */
+
                 transition: all 0.2s ease-out;
                 
                 appearance: none;
                 width: 100%;
                 text-align: left;
-                color: #e2e8f0; /* text-slate-200 */
+                color: #e2e8f0;
             }
             #lobby-room-list li .lobby-room-item:hover {
-                /* Efeito de "levantar" e iluminar */
                 transform: translateY(-2px);
                 box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-                background-image: linear-gradient(to bottom, #475569, #334155); /* de slate-600 para slate-700 */
-                border-color: #6366f1; /* Borda com cor de destaque (indigo-500) */
+                background-color: #475569;
+                border-color: #6366f1;
             }
-            /* Adicionei um efeito de "pressionar" */
             #lobby-room-list li .lobby-room-item:active {
                 transform: translateY(0);
                 box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
-                background-image: linear-gradient(to bottom, #1e293b, #1e293b); /* slate-800 sólido */
+                background-image: linear-gradient(to bottom, #1e293b, #1e293b);
             }
+            #lobby-room-list li .lobby-room-item .room-name {
+                font-family: "Segoe UI", "Inter", sans-serif;
+                font-weight: 500;
+                font-size: 1.125rem;
+                letter-spacing: 0.02em;
+            }
+
             #lobby-room-list li.no-rooms {
                 padding: 1rem;
                 text-align: center;
@@ -2563,18 +2567,17 @@
                             const querySnapshot = await getDocs(q);
 
                             if (querySnapshot.empty) {
-                                return false; // Not taken
+                                return false;
                             }
 
-                            // Check if the only user with this nickname is the current user
                             if (querySnapshot.size === 1 && querySnapshot.docs[0].id === currentUserId) {
-                                return false; // Not taken (it's me)
+                                return false;
                             }
 
-                            return true; // Taken by someone else
+                            return true;
                         } catch (e) {
                             console.error("Error checking nickname uniqueness:", e);
-                            return true; // Fail safe: assume it's taken if error
+                            return true;
                         }
                     }
 
@@ -6408,7 +6411,7 @@
                 if (presenceInterval) clearInterval(presenceInterval);
 
                 const userRef = doc(usersCol, userId);
-                const globalUserRef = doc(nicknamesCol, userId); // This is for the *global* user list
+                const globalUserRef = doc(nicknamesCol, userId);
 
                 await setDoc(userRef, {
                     nickname: userNickname,
@@ -6420,8 +6423,8 @@
                 await setDoc(globalUserRef, {
                     last_seen: serverTimestamp(),
                     userId: userId,
-                    nickname: userNickname, // Add nickname to global list
-                    isAnon: auth.currentUser ? auth.currentUser.isAnonymous : true // Add isAnon
+                    nickname: userNickname,
+                    isAnon: auth.currentUser ? auth.currentUser.isAnonymous : true
                 }, { merge: true });
 
                 presenceInterval = setInterval(() => {
@@ -6765,7 +6768,7 @@
 
                         if (newNickname) {
                             newNickname = newNickname.trim();
-                            const oldNickname = userNickname; // Store the old nickname
+                            const oldNickname = userNickname;
 
                             if (newNickname !== "" && newNickname !== userNickname) {
 
@@ -6785,18 +6788,14 @@
                                     return;
                                 }
 
-                                // Update the user's document in /users/{userId}
                                 const userRef = doc(nicknamesCol, userId);
                                 await updateDoc(userRef, {
                                     nickname: newNickname,
                                     last_seen: serverTimestamp()
                                 });
 
-                                // Update local state
                                 userNickname = newNickname;
                                 localStorage.setItem(NICKNAME_STORAGE_KEY, userNickname);
-
-                                // Update the nickname in the *current board's* user list
                                 if (currentBoardId) {
                                     const boardUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'boards', currentBoardId, 'users', userId);
                                     await setDoc(boardUserRef, {
@@ -6804,7 +6803,6 @@
                                     }, { merge: true });
                                 }
 
-                                // Try to update ownership on boards
                                 try {
                                     console.log(`Updating board ownership from '${oldNickname}' to '${newNickname}' for ownerId '${userId}'...`);
                                     const boardsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'boards');
@@ -6866,7 +6864,7 @@
                         submitNicknamePasswordSettingsBtn.textContent = 'Saving...';
 
                         try {
-                            const userRef = doc(nicknamesCol, userId); // Correct: Use userId
+                            const userRef = doc(nicknamesCol, userId);
                             const newPassword = nicknamePasswordChangeInput.value;
 
                             if (removeNicknamePasswordCheckbox.checked) {
@@ -7363,33 +7361,26 @@
                             let finalNickname = null;
 
                             if (userSnap.exists()) {
-                                // User document already exists
                                 const userDocData = userSnap.data();
                                 finalNickname = userDocData.nickname;
-                                userNickname = finalNickname; // Set global nickname
+                                userNickname = finalNickname;
                                 localStorage.setItem(NICKNAME_STORAGE_KEY, userNickname);
 
-                                // Update isAnon status if it changed (e.g., anon to Google)
                                 if (userDocData.isAnon !== isAnon) {
                                     await updateDoc(userRef, { isAnon: isAnon, last_seen: serverTimestamp() });
                                 } else {
-                                    // Just update last_seen if status is the same
                                     await updateDoc(userRef, { last_seen: serverTimestamp() });
                                 }
                             } else {
-                                // First-time login for this user, create document
                                 let savedNickname = localStorage.getItem(NICKNAME_STORAGE_KEY);
                                 let potentialNickname = null;
 
                                 if (!isAnon) {
-                                    // Google Sign-In
                                     potentialNickname = user.displayName || savedNickname || `User_${userId.substring(0, 4)}`;
                                 } else {
-                                    // Anonymous Sign-In
                                     potentialNickname = savedNickname || null;
                                 }
 
-                                // If no nickname (e.g., first-time anon), or if Google name is taken, we must prompt.
                                 let isTaken = potentialNickname ? await isNicknameTaken(potentialNickname, userId) : false;
 
                                 if (!potentialNickname || isTaken) {
@@ -7419,8 +7410,6 @@
                                         );
 
                                         if (!newNickname || newNickname.trim() === "") {
-                                            // User cancelled or submitted empty
-                                            // Let's force a default if they cancel/empty
                                             newNickname = `User_${userId.substring(0, 4)}`;
                                         }
                                         finalNickname = newNickname.trim();
@@ -7435,11 +7424,10 @@
                                     finalNickname = potentialNickname;
                                 }
 
-                                // Save the new user document
                                 await setDoc(userRef, {
                                     nickname: finalNickname,
                                     isAnon: isAnon,
-                                    userId: userId, // Store userId in doc for easier queries
+                                    userId: userId,
                                     last_seen: serverTimestamp()
                                 });
                                 userNickname = finalNickname;
