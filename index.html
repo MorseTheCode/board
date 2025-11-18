@@ -2089,6 +2089,14 @@
                     Logout from Guest Nickname
                 </button>
 
+                <button
+                    id="logout-google-btn"
+                    class="header-btn danger w-full mb-6"
+                    style="display: none;"
+                >
+                    Sign Out from Google
+                </button>
+
                 <div class="h-px bg-slate-700 my-6"></div>
 
                 <h3 class="text-lg font-semibold text-slate-200 mb-2">
@@ -6866,10 +6874,17 @@
                         toggleSidebarBtn.style.display = 'none';
                         document.getElementById('center-board-btn').style.display = 'none';
                         
-                        if (auth.currentUser && auth.currentUser.isAnonymous) {
-                            logoutGuestBtn.style.display = 'block';
+                        if (auth.currentUser) {
+                            if (auth.currentUser.isAnonymous) {
+                                logoutGuestBtn.style.display = 'block';
+                                logoutGoogleBtn.style.display = 'none';
+                            } else {
+                                logoutGuestBtn.style.display = 'none';
+                                logoutGoogleBtn.style.display = 'block';
+                            }
                         } else {
                             logoutGuestBtn.style.display = 'none';
+                            logoutGoogleBtn.style.display = 'none';
                         }
 
                         lobbyModalOverlay.style.display = 'flex';
@@ -7290,6 +7305,14 @@
                     });
 
                     logoutGuestBtn.addEventListener('click', async () => {
+                        try {
+                            await auth.signOut();
+                        } catch (e) {
+                            console.error("Error signing out:", e);
+                        }
+                    });
+
+                    logoutGoogleBtn.addEventListener('click', async () => {
                         try {
                             await auth.signOut();
                         } catch (e) {
